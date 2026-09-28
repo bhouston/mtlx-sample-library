@@ -1,0 +1,209 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!-- Aged, cracked concrete ground slab. Texcoords are meters: UV 0..1 = 1 m. -->
+  <nodegraph name="NG_cracked_slab">
+    <texcoord name="uv" type="vector2" />
+
+    <!-- ===== Major cracks: worley F2-F1 on ~40 cm cells (2.5 / m), heavily warped. ===== -->
+    <!-- Meander warp, ~30 cm wavelength, +-0.35 cell. -->
+    <multiply name="uv_mw" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="3" /></multiply>
+    <fractal2d name="mwarp" type="vector2"><input name="texcoord" type="vector2" nodename="uv_mw" /><input name="octaves" type="integer" value="2" /><input name="amplitude" type="vector2" value="0.28, 0.28" /></fractal2d>
+    <!-- Jagged warp, ~1.5 cm wavelength, +-0.025 cell (~1 cm). -->
+    <multiply name="uv_jw" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="65" /></multiply>
+    <fractal2d name="jwarp" type="vector2"><input name="texcoord" type="vector2" nodename="uv_jw" /><input name="octaves" type="integer" value="2" /><input name="amplitude" type="vector2" value="0.025, 0.025" /></fractal2d>
+    <multiply name="uv_cr" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="2.2" /></multiply>
+    <add name="cr_w1" type="vector2"><input name="in1" type="vector2" nodename="uv_cr" /><input name="in2" type="vector2" nodename="mwarp" /></add>
+    <add name="cr_coord" type="vector2"><input name="in1" type="vector2" nodename="cr_w1" /><input name="in2" type="vector2" nodename="jwarp" /></add>
+    <worleynoise2d name="cr_F" type="vector2"><input name="texcoord" type="vector2" nodename="cr_coord" /></worleynoise2d>
+    <dotproduct name="cr_e" type="float"><input name="in1" type="vector2" nodename="cr_F" /><input name="in2" type="vector2" value="-1, 1" /></dotproduct>
+
+    <!-- Which cell borders are cracked: a ~50 cm noise field; width tapers to 0 at crack tips. -->
+    <multiply name="uv_cm" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="2.1" /></multiply>
+    <fractal2d name="cmask_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_cm" /><input name="octaves" type="integer" value="2" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <smoothstep name="cmask" type="float"><input name="in" type="float" nodename="cmask_raw" /><input name="low" type="float" value="-0.18" /><input name="high" type="float" value="0.05" /></smoothstep>
+    <!-- Width variation along the crack, ~8 cm. -->
+    <multiply name="uv_cwv" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="12" /></multiply>
+    <noise2d name="cwv" type="float"><input name="texcoord" type="vector2" nodename="uv_cwv" /><input name="amplitude" type="float" value="0.5" /><input name="pivot" type="float" value="0.5" /></noise2d>
+    <!-- threshold in F2-F1 units ~ width * 2 * 2.5/m: 0.012 ~ 2.4 mm wide. -->
+    <mix name="cr_tw" type="float"><input name="bg" type="float" value="0.007" /><input name="fg" type="float" value="0.022" /><input name="mix" type="float" nodename="cwv" /></mix>
+    <multiply name="cr_t" type="float"><input name="in1" type="float" nodename="cr_tw" /><input name="in2" type="float" nodename="cmask" /></multiply>
+    <subtract name="cr_d" type="float"><input name="in1" type="float" nodename="cr_t" /><input name="in2" type="float" nodename="cr_e" /></subtract>
+    <smoothstep name="crack" type="float"><input name="in" type="float" nodename="cr_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.004" /></smoothstep>
+
+    <!-- Chipped edges: a ragged band up to ~3x the crack width, broken by ~5 mm noise. -->
+    <multiply name="uv_chip" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="220" /></multiply>
+    <noise2d name="chipn" type="float"><input name="texcoord" type="vector2" nodename="uv_chip" /><input name="amplitude" type="float" value="0.5" /><input name="pivot" type="float" value="0.5" /></noise2d>
+    <multiply name="chip_tn0" type="float"><input name="in1" type="float" nodename="chipn" /><input name="in2" type="float" value="2.5" /></multiply>
+    <add name="chip_tn" type="float"><input name="in1" type="float" nodename="chip_tn0" /><input name="in2" type="float" value="1.0" /></add>
+    <multiply name="chip_t" type="float"><input name="in1" type="float" nodename="cr_t" /><input name="in2" type="float" nodename="chip_tn" /></multiply>
+    <!-- Bevel ramp from the crack lip out to the chip boundary (not a flat terrace). -->
+    <add name="chip_hi" type="float"><input name="in1" type="float" nodename="chip_t" /><input name="in2" type="float" value="0.001" /></add>
+    <smoothstep name="chip_s" type="float"><input name="in" type="float" nodename="cr_e" /><input name="low" type="float" nodename="cr_t" /><input name="high" type="float" nodename="chip_hi" /></smoothstep>
+    <invert name="chip" type="float"><input name="in" type="float" nodename="chip_s" /></invert>
+
+    <!-- Dirt halo along major cracks, ~2 cm each side. -->
+    <smoothstep name="halo_s" type="float"><input name="in" type="float" nodename="cr_e" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.1" /></smoothstep>
+    <invert name="halo_i" type="float"><input name="in" type="float" nodename="halo_s" /></invert>
+    <multiply name="halo" type="float"><input name="in1" type="float" nodename="halo_i" /><input name="in2" type="float" nodename="cmask" /></multiply>
+
+    <!-- ===== Hairline cracks: worley F2-F1 on ~14 cm cells (7 / m), sparse. ===== -->
+    <multiply name="uv_hw" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="9" /></multiply>
+    <fractal2d name="hwarp" type="vector2"><input name="texcoord" type="vector2" nodename="uv_hw" /><input name="octaves" type="integer" value="3" /><input name="amplitude" type="vector2" value="0.3, 0.3" /></fractal2d>
+    <multiply name="uv_hj" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="160" /></multiply>
+    <noise2d name="hjwarp" type="vector2"><input name="texcoord" type="vector2" nodename="uv_hj" /><input name="amplitude" type="vector2" value="0.03, 0.03" /></noise2d>
+    <multiply name="uv_hc" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="7" /></multiply>
+    <add name="hc_w1" type="vector2"><input name="in1" type="vector2" nodename="uv_hc" /><input name="in2" type="vector2" nodename="hwarp" /></add>
+    <add name="hc_coord" type="vector2"><input name="in1" type="vector2" nodename="hc_w1" /><input name="in2" type="vector2" nodename="hjwarp" /></add>
+    <worleynoise2d name="hc_F" type="vector2"><input name="texcoord" type="vector2" nodename="hc_coord" /></worleynoise2d>
+    <dotproduct name="hc_e" type="float"><input name="in1" type="vector2" nodename="hc_F" /><input name="in2" type="vector2" value="-1, 1" /></dotproduct>
+    <multiply name="uv_hm" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="4.3" /></multiply>
+    <fractal2d name="hmask_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_hm" /><input name="octaves" type="integer" value="2" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <smoothstep name="hmask" type="float"><input name="in" type="float" nodename="hmask_raw" /><input name="low" type="float" value="0.05" /><input name="high" type="float" value="0.25" /></smoothstep>
+    <!-- 0.012 in F2-F1 units at 7/m ~ 0.8 mm (reads as a hairline). -->
+    <multiply name="hc_t" type="float"><input name="in1" type="float" nodename="hmask" /><input name="in2" type="float" value="0.012" /></multiply>
+    <subtract name="hc_d" type="float"><input name="in1" type="float" nodename="hc_t" /><input name="in2" type="float" nodename="hc_e" /></subtract>
+    <smoothstep name="hair" type="float"><input name="in" type="float" nodename="hc_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.006" /></smoothstep>
+
+    <!-- ===== Surface wear. ===== -->
+    <!-- Broad dirty mottling, ~25 cm. -->
+    <multiply name="uv_mottle" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="4" /></multiply>
+    <fractal2d name="mottle_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_mottle" /><input name="octaves" type="integer" value="5" /><input name="diminish" type="float" value="0.55" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <add name="mottle" type="float"><input name="in1" type="float" nodename="mottle_raw" /><input name="in2" type="float" value="0.5" /></add>
+    <!-- Mid paste variation, ~5 cm. -->
+    <multiply name="uv_mid" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="18" /></multiply>
+    <fractal2d name="mid" type="float"><input name="texcoord" type="vector2" nodename="uv_mid" /><input name="octaves" type="integer" value="3" /></fractal2d>
+    <!-- Sand grain, ~1.5 mm. -->
+    <multiply name="uv_grain" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="650" /></multiply>
+    <fractal2d name="grain" type="float"><input name="texcoord" type="vector2" nodename="uv_grain" /><input name="octaves" type="integer" value="3" /></fractal2d>
+    <!-- Abrasion patches (~15 cm) where paste is worn off and sand is exposed. -->
+    <multiply name="uv_wear" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="6.5" /></multiply>
+    <fractal2d name="wear_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_wear" /><input name="octaves" type="integer" value="4" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <smoothstep name="wear" type="float"><input name="in" type="float" nodename="wear_raw" /><input name="low" type="float" value="0.06" /><input name="high" type="float" value="0.3" /></smoothstep>
+    <!-- Exposed sand grains, ~1 mm (900 / m), domed; only in abraded areas. -->
+    <multiply name="uv_sand" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="900" /></multiply>
+    <worleynoise2d name="sand_f1" type="float"><input name="texcoord" type="vector2" nodename="uv_sand" /></worleynoise2d>
+    <smoothstep name="sand_s" type="float"><input name="in" type="float" nodename="sand_f1" /><input name="low" type="float" value="0.15" /><input name="high" type="float" value="0.6" /></smoothstep>
+    <invert name="sand" type="float"><input name="in" type="float" nodename="sand_s" /></invert>
+    <multiply name="uv_sandc" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="900" /></multiply>
+    <cellnoise2d name="sand_c" type="float"><input name="texcoord" type="vector2" nodename="uv_sandc" /></cellnoise2d>
+    <!-- Oil / water stain blotches, ~30 cm, soft with a slightly darker rim. -->
+    <multiply name="uv_stain" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="3.3" /></multiply>
+    <add name="uv_stain_o" type="vector2"><input name="in1" type="vector2" nodename="uv_stain" /><input name="in2" type="vector2" value="17.3, 5.1" /></add>
+    <fractal2d name="stain_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_stain_o" /><input name="octaves" type="integer" value="4" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <smoothstep name="stain" type="float"><input name="in" type="float" nodename="stain_raw" /><input name="low" type="float" value="0.08" /><input name="high" type="float" value="0.3" /></smoothstep>
+    <!-- Scuffs: streaks ~1 cm wide, ~20 cm long, rotated 25 degrees. -->
+    <place2d name="uv_scuff_r" type="vector2"><input name="texcoord" type="vector2" nodename="uv" /><input name="rotate" type="float" value="25" /></place2d>
+    <multiply name="uv_scuff" type="vector2"><input name="in1" type="vector2" nodename="uv_scuff_r" /><input name="in2" type="vector2" value="5, 70" /></multiply>
+    <noise2d name="scuff_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_scuff" /></noise2d>
+    <smoothstep name="scuff_s" type="float"><input name="in" type="float" nodename="scuff_raw" /><input name="low" type="float" value="0.4" /><input name="high" type="float" value="0.7" /></smoothstep>
+    <multiply name="uv_scm" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="2.7" /></multiply>
+    <noise2d name="scm" type="float"><input name="texcoord" type="vector2" nodename="uv_scm" /></noise2d>
+    <smoothstep name="scuff_m" type="float"><input name="in" type="float" nodename="scm" /><input name="low" type="float" value="0.25" /><input name="high" type="float" value="0.55" /></smoothstep>
+    <multiply name="scuff" type="float"><input name="in1" type="float" nodename="scuff_s" /><input name="in2" type="float" nodename="scuff_m" /></multiply>
+    <!-- Sparse pits on a 5 cm grid; a smooth noise sets each radius (negative = none). -->
+    <multiply name="uv_pit" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="20" /></multiply>
+    <worleynoise2d name="pit_dist" type="float"><input name="texcoord" type="vector2" nodename="uv_pit" /></worleynoise2d>
+    <multiply name="uv_psize" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="23" /></multiply>
+    <noise2d name="psize_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_psize" /></noise2d>
+    <multiply name="psize_s" type="float"><input name="in1" type="float" nodename="psize_raw" /><input name="in2" type="float" value="0.3" /></multiply>
+    <subtract name="pit_r" type="float"><input name="in1" type="float" nodename="psize_s" /><input name="in2" type="float" value="0.12" /></subtract>
+    <subtract name="pit_d" type="float"><input name="in1" type="float" nodename="pit_r" /><input name="in2" type="float" nodename="pit_dist" /></subtract>
+    <smoothstep name="pit" type="float"><input name="in" type="float" nodename="pit_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.03" /></smoothstep>
+
+    <!-- ===== Height (meters). ===== -->
+    <!-- 1.5 mm undulation, 0.2 mm grain (x2 in worn areas), -0.3 mm abrasion, -0.8 mm chips, -4 mm crack, -0.6 mm hairline, -2 mm pits. -->
+    <multiply name="h_mottle" type="float"><input name="in1" type="float" nodename="mottle" /><input name="in2" type="float" value="0.0015" /></multiply>
+    <mix name="grain_amp" type="float"><input name="bg" type="float" value="0.00006" /><input name="fg" type="float" value="0.00008" /><input name="mix" type="float" nodename="wear" /></mix>
+    <multiply name="h_grain" type="float"><input name="in1" type="float" nodename="grain" /><input name="in2" type="float" nodename="grain_amp" /></multiply>
+    <multiply name="h_wear" type="float"><input name="in1" type="float" nodename="wear" /><input name="in2" type="float" value="-0.0003" /></multiply>
+    <multiply name="h_chip" type="float"><input name="in1" type="float" nodename="chip" /><input name="in2" type="float" value="-0.0012" /></multiply>
+    <multiply name="h_crack" type="float"><input name="in1" type="float" nodename="crack" /><input name="in2" type="float" value="-0.004" /></multiply>
+    <multiply name="h_hair" type="float"><input name="in1" type="float" nodename="hair" /><input name="in2" type="float" value="-0.0006" /></multiply>
+    <multiply name="h_pit" type="float"><input name="in1" type="float" nodename="pit" /><input name="in2" type="float" value="-0.002" /></multiply>
+    <add name="h1" type="float"><input name="in1" type="float" nodename="h_mottle" /><input name="in2" type="float" nodename="h_grain" /></add>
+    <add name="h2" type="float"><input name="in1" type="float" nodename="h1" /><input name="in2" type="float" nodename="h_wear" /></add>
+    <add name="h3" type="float"><input name="in1" type="float" nodename="h2" /><input name="in2" type="float" nodename="h_chip" /></add>
+    <add name="h4" type="float"><input name="in1" type="float" nodename="h3" /><input name="in2" type="float" nodename="h_crack" /></add>
+    <add name="h5" type="float"><input name="in1" type="float" nodename="h4" /><input name="in2" type="float" nodename="h_hair" /></add>
+    <multiply name="sand_w" type="float"><input name="in1" type="float" nodename="sand" /><input name="in2" type="float" nodename="wear" /></multiply>
+    <multiply name="h_sand" type="float"><input name="in1" type="float" nodename="sand_w" /><input name="in2" type="float" value="0.00025" /></multiply>
+    <add name="h5b" type="float"><input name="in1" type="float" nodename="h5" /><input name="in2" type="float" nodename="h_sand" /></add>
+    <add name="height" type="float"><input name="in1" type="float" nodename="h5b" /><input name="in2" type="float" nodename="h_pit" /></add>
+    <!-- mm workaround: three.js heighttonormal flattens meter-scale derivatives; scale 16 cancels the Sobel 1/16. -->
+    <multiply name="uv_mm" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="1000" /></multiply>
+    <multiply name="height_mm" type="float"><input name="in1" type="float" nodename="height" /><input name="in2" type="float" value="1000" /></multiply>
+    <heighttonormal name="n_tangent" type="vector3"><input name="in" type="float" nodename="height_mm" /><input name="scale" type="float" value="16" /><input name="texcoord" type="vector2" nodename="uv_mm" /></heighttonormal>
+    <normalmap name="n_world" type="vector3"><input name="in" type="vector3" nodename="n_tangent" /></normalmap>
+
+    <!-- ===== Color (linear). ===== -->
+    <mix name="col_mottle" type="color3"><input name="bg" type="color3" value="0.25, 0.25, 0.245" /><input name="fg" type="color3" value="0.39, 0.385, 0.375" /><input name="mix" type="float" nodename="mottle" /></mix>
+    <multiply name="grain_k" type="float"><input name="in1" type="float" nodename="grain" /><input name="in2" type="float" nodename="grain_ck" /></multiply>
+    <mix name="grain_ck" type="float"><input name="bg" type="float" value="0.1" /><input name="fg" type="float" value="0.3" /><input name="mix" type="float" nodename="wear" /></mix>
+    <multiply name="mid_k" type="float"><input name="in1" type="float" nodename="mid" /><input name="in2" type="float" value="0.1" /></multiply>
+    <add name="tint_a" type="float"><input name="in1" type="float" nodename="grain_k" /><input name="in2" type="float" nodename="mid_k" /></add>
+    <subtract name="sand_c0" type="float"><input name="in1" type="float" nodename="sand_c" /><input name="in2" type="float" value="0.45" /></subtract>
+    <multiply name="sand_ck" type="float"><input name="in1" type="float" nodename="sand_c0" /><input name="in2" type="float" nodename="sand_w" /></multiply>
+    <multiply name="sand_k" type="float"><input name="in1" type="float" nodename="sand_ck" /><input name="in2" type="float" value="0.28" /></multiply>
+    <add name="tint_b" type="float"><input name="in1" type="float" nodename="tint_a" /><input name="in2" type="float" nodename="sand_k" /></add>
+    <add name="tint_f" type="float"><input name="in1" type="float" nodename="tint_b" /><input name="in2" type="float" value="1" /></add>
+    <multiply name="col_a" type="color3"><input name="in1" type="color3" nodename="col_mottle" /><input name="in2" type="float" nodename="tint_f" /></multiply>
+    <!-- Worn areas: exposed sand is lighter and warmer. -->
+    <multiply name="col_worn" type="color3"><input name="in1" type="color3" nodename="col_a" /><input name="in2" type="color3" value="1.06, 1.05, 1.02" /></multiply>
+    <mix name="col_b" type="color3"><input name="bg" type="color3" nodename="col_a" /><input name="fg" type="color3" nodename="col_worn" /><input name="mix" type="float" nodename="wear" /></mix>
+    <!-- Stains: oily darkening, slightly brown. -->
+    <multiply name="col_stained" type="color3"><input name="in1" type="color3" nodename="col_b" /><input name="in2" type="color3" value="0.62, 0.6, 0.57" /></multiply>
+    <mix name="col_c" type="color3"><input name="bg" type="color3" nodename="col_b" /><input name="fg" type="color3" nodename="col_stained" /><input name="mix" type="float" nodename="stain" /></mix>
+    <!-- Scuffs: dark rubber-ish. -->
+    <multiply name="scuff_k" type="float"><input name="in1" type="float" nodename="scuff" /><input name="in2" type="float" value="0.35" /></multiply>
+    <mix name="col_d" type="color3"><input name="bg" type="color3" nodename="col_c" /><input name="fg" type="color3" value="0.12, 0.115, 0.11" /><input name="mix" type="float" nodename="scuff_k" /></mix>
+    <!-- Stain tide-line rim. -->
+    <invert name="stain_i" type="float"><input name="in" type="float" nodename="stain" /></invert>
+    <multiply name="stain_rim0" type="float"><input name="in1" type="float" nodename="stain" /><input name="in2" type="float" nodename="stain_i" /></multiply>
+    <multiply name="stain_rim" type="float"><input name="in1" type="float" nodename="stain_rim0" /><input name="in2" type="float" value="0.6" /></multiply>
+    <mix name="col_d2" type="color3"><input name="bg" type="color3" nodename="col_d" /><input name="fg" type="color3" value="0.13, 0.125, 0.115" /><input name="mix" type="float" nodename="stain_rim" /></mix>
+    <!-- Ground-in dirt, ~8 cm patches with ~1 cm breakup. -->
+    <multiply name="uv_dirt" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="11" /></multiply>
+    <fractal2d name="dirt_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_dirt" /><input name="octaves" type="integer" value="5" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <smoothstep name="dirt" type="float"><input name="in" type="float" nodename="dirt_raw" /><input name="low" type="float" value="0.0" /><input name="high" type="float" value="0.35" /></smoothstep>
+    <multiply name="dirt_k" type="float"><input name="in1" type="float" nodename="dirt" /><input name="in2" type="float" value="0.3" /></multiply>
+    <mix name="col_d3" type="color3"><input name="bg" type="color3" nodename="col_d2" /><input name="fg" type="color3" value="0.15, 0.145, 0.135" /><input name="mix" type="float" nodename="dirt_k" /></mix>
+    <!-- Dirt halo along cracks. -->
+    <multiply name="halo_k" type="float"><input name="in1" type="float" nodename="halo" /><input name="in2" type="float" value="0.35" /></multiply>
+    <mix name="col_e" type="color3"><input name="bg" type="color3" nodename="col_d3" /><input name="fg" type="color3" value="0.12, 0.11, 0.1" /><input name="mix" type="float" nodename="halo_k" /></mix>
+    <!-- Chipped edges: fresh broken paste, lighter. -->
+    <multiply name="col_chipc" type="color3"><input name="in1" type="color3" nodename="col_e" /><input name="in2" type="float" value="1.15" /></multiply>
+    <mix name="col_f" type="color3"><input name="bg" type="color3" nodename="col_e" /><input name="fg" type="color3" nodename="col_chipc" /><input name="mix" type="float" nodename="chip" /></mix>
+    <!-- Pits and hairlines hold dirt. -->
+    <mix name="col_g" type="color3"><input name="bg" type="color3" nodename="col_f" /><input name="fg" type="color3" value="0.1, 0.095, 0.09" /><input name="mix" type="float" nodename="pit" /></mix>
+    <multiply name="hair_k" type="float"><input name="in1" type="float" nodename="hair" /><input name="in2" type="float" value="0.7" /></multiply>
+    <mix name="col_h" type="color3"><input name="bg" type="color3" nodename="col_g" /><input name="fg" type="color3" value="0.08, 0.075, 0.07" /><input name="mix" type="float" nodename="hair_k" /></mix>
+    <!-- Major crack interior: packed dark dirt. -->
+    <mix name="dirt_fill" type="color3"><input name="bg" type="color3" value="0.025, 0.023, 0.02" /><input name="fg" type="color3" value="0.075, 0.068, 0.058" /><input name="mix" type="float" nodename="sand" /></mix>
+    <mix name="base_color" type="color3"><input name="bg" type="color3" nodename="col_h" /><input name="fg" type="color3" nodename="dirt_fill" /><input name="mix" type="float" nodename="crack" /></mix>
+
+    <!-- Dielectric throughout. -->
+    <constant name="metalness" type="float"><input name="value" type="float" value="0" /></constant>
+
+    <!-- ===== Roughness: 0.84..0.92, 0.72 in stains, 0.8 scuffs, 0.95 in cracks. ===== -->
+    <mix name="r_a" type="float"><input name="bg" type="float" value="0.92" /><input name="fg" type="float" value="0.84" /><input name="mix" type="float" nodename="mottle" /></mix>
+    <mix name="r_b" type="float"><input name="bg" type="float" nodename="r_a" /><input name="fg" type="float" value="0.72" /><input name="mix" type="float" nodename="stain" /></mix>
+    <mix name="r_c" type="float"><input name="bg" type="float" nodename="r_b" /><input name="fg" type="float" value="0.78" /><input name="mix" type="float" nodename="scuff" /></mix>
+    <max name="r_mask" type="float"><input name="in1" type="float" nodename="crack" /><input name="in2" type="float" nodename="pit" /></max>
+    <mix name="roughness" type="float"><input name="bg" type="float" nodename="r_c" /><input name="fg" type="float" value="0.95" /><input name="mix" type="float" nodename="r_mask" /></mix>
+
+    <output name="base_color_out" type="color3" nodename="base_color" />
+    <output name="roughness_out" type="float" nodename="roughness" />
+    <output name="normal_out" type="vector3" nodename="n_world" />
+    <output name="metalness_out" type="float" nodename="metalness" />
+  </nodegraph>
+  <standard_surface name="SR_cracked_slab" type="surfaceshader">
+    <input name="base" type="float" value="1" />
+    <input name="base_color" type="color3" nodegraph="NG_cracked_slab" output="base_color_out" />
+    <input name="specular" type="float" value="0.5" />
+    <input name="specular_IOR" type="float" value="1.5" />
+    <input name="specular_roughness" type="float" nodegraph="NG_cracked_slab" output="roughness_out" />
+    <input name="metalness" type="float" nodegraph="NG_cracked_slab" output="metalness_out" />
+    <input name="normal" type="vector3" nodegraph="NG_cracked_slab" output="normal_out" />
+  </standard_surface>
+  <surfacematerial name="M_cracked_slab" type="material"><input name="surfaceshader" type="surfaceshader" nodename="SR_cracked_slab" /></surfacematerial>
+</materialx>

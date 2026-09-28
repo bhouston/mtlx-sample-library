@@ -1,0 +1,152 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!-- Concrete masonry unit (CMU) wall, running bond. Texcoords are meters: UV 0..1 = 1 m.
+       Metric blocks 390 x 190 mm with 10 mm joints: module 400 x 200 mm, alternate courses offset 200 mm. -->
+  <nodegraph name="NG_cmu_block">
+    <texcoord name="uv" type="vector2" />
+    <separate2 name="uv_s" type="multioutput"><input name="in" type="vector2" nodename="uv" /></separate2>
+
+    <!-- Running-bond layout in meters. -->
+    <multiply name="row_f" type="float"><input name="in1" type="float" nodename="uv_s" output="outy" /><input name="in2" type="float" value="5" /></multiply>
+    <floor name="row" type="float"><input name="in" type="float" nodename="row_f" /></floor>
+    <modulo name="row_odd" type="float"><input name="in1" type="float" nodename="row" /><input name="in2" type="float" value="2" /></modulo>
+    <multiply name="row_shift" type="float"><input name="in1" type="float" nodename="row_odd" /><input name="in2" type="float" value="0.2" /></multiply>
+    <add name="x" type="float"><input name="in1" type="float" nodename="uv_s" output="outx" /><input name="in2" type="float" nodename="row_shift" /></add>
+    <multiply name="col_f" type="float"><input name="in1" type="float" nodename="x" /><input name="in2" type="float" value="2.5" /></multiply>
+    <floor name="col" type="float"><input name="in" type="float" nodename="col_f" /></floor>
+    <modulo name="lx" type="float"><input name="in1" type="float" nodename="x" /><input name="in2" type="float" value="0.4" /></modulo>
+    <modulo name="ly" type="float"><input name="in1" type="float" nodename="uv_s" output="outy" /><input name="in2" type="float" value="0.2" /></modulo>
+    <subtract name="lx_inv" type="float"><input name="in1" type="float" value="0.4" /><input name="in2" type="float" nodename="lx" /></subtract>
+    <subtract name="ly_inv" type="float"><input name="in1" type="float" value="0.2" /><input name="in2" type="float" nodename="ly" /></subtract>
+    <min name="dx" type="float"><input name="in1" type="float" nodename="lx" /><input name="in2" type="float" nodename="lx_inv" /></min>
+    <min name="dy" type="float"><input name="in1" type="float" nodename="ly" /><input name="in2" type="float" nodename="ly_inv" /></min>
+    <!-- Distance (m) from the joint centerline; the joint is |d| < 5 mm. -->
+    <min name="d_raw" type="float"><input name="in1" type="float" nodename="dx" /><input name="in2" type="float" nodename="dy" /></min>
+    <!-- Joint edges wander +-0.6 mm (~1.5 cm features). -->
+    <multiply name="uv_jw" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="70" /></multiply>
+    <noise2d name="jw" type="float"><input name="texcoord" type="vector2" nodename="uv_jw" /><input name="amplitude" type="float" value="0.0006" /></noise2d>
+    <add name="d" type="float"><input name="in1" type="float" nodename="d_raw" /><input name="in2" type="float" nodename="jw" /></add>
+
+    <!-- Per-block random value. -->
+    <combine2 name="block_id" type="vector2"><input name="in1" type="float" nodename="col" /><input name="in2" type="float" nodename="row" /></combine2>
+    <cellnoise2d name="block_rand" type="float"><input name="texcoord" type="vector2" nodename="block_id" /></cellnoise2d>
+
+    <!-- Chipped arrises: a signed fractal (~2 cm features) pushes the block edge back 0..5 mm in places. -->
+    <multiply name="uv_chip" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="45" /></multiply>
+    <fractal2d name="chip_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_chip" /><input name="octaves" type="integer" value="2" /><input name="diminish" type="float" value="0.35" /></fractal2d>
+    <multiply name="chip_s" type="float"><input name="in1" type="float" nodename="chip_raw" /><input name="in2" type="float" value="0.009" /></multiply>
+    <subtract name="chip_b" type="float"><input name="in1" type="float" nodename="chip_s" /><input name="in2" type="float" value="0.002" /></subtract>
+    <max name="chip" type="float"><input name="in1" type="float" nodename="chip_b" /><input name="in2" type="float" value="0" /></max>
+    <subtract name="d_chip" type="float"><input name="in1" type="float" nodename="d" /><input name="in2" type="float" nodename="chip" /></subtract>
+    <!-- Block profile: 0 at the arris (5 mm from joint center), 1 on the face 3.5 mm further in. -->
+    <smoothstep name="block_prof" type="float"><input name="in" type="float" nodename="d_chip" /><input name="low" type="float" value="0.005" /><input name="high" type="float" value="0.0085" /></smoothstep>
+    <!-- Mortar mask: 1 inside the 10 mm joint. -->
+    <smoothstep name="not_mortar" type="float"><input name="in" type="float" nodename="d" /><input name="low" type="float" value="0.0046" /><input name="high" type="float" value="0.0054" /></smoothstep>
+    <subtract name="mortar" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="not_mortar" /></subtract>
+    <!-- Chip zone: block surface below the face (for lighter, fresher colour). -->
+    <subtract name="chip_zone_a" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="block_prof" /></subtract>
+    <multiply name="chip_zone" type="float"><input name="in1" type="float" nodename="chip_zone_a" /><input name="in2" type="float" nodename="not_mortar" /></multiply>
+
+    <!-- Block face texture. Coarse voids on a 3 mm grid (0.5-2.5 mm across). -->
+    <multiply name="uv_pa" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="333" /></multiply>
+    <worleynoise2d name="pa_dist" type="float"><input name="texcoord" type="vector2" nodename="uv_pa" /></worleynoise2d>
+    <multiply name="uv_pas" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="150" /></multiply>
+    <noise2d name="pa_size" type="float"><input name="texcoord" type="vector2" nodename="uv_pas" /><input name="amplitude" type="float" value="0.3" /></noise2d>
+    <add name="pa_r" type="float"><input name="in1" type="float" nodename="pa_size" /><input name="in2" type="float" value="0.16" /></add>
+    <subtract name="pa_d" type="float"><input name="in1" type="float" nodename="pa_r" /><input name="in2" type="float" nodename="pa_dist" /></subtract>
+    <smoothstep name="pore_a" type="float"><input name="in" type="float" nodename="pa_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.06" /></smoothstep>
+    <!-- Fine voids on a 1.2 mm grid. -->
+    <multiply name="uv_pb" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="830" /></multiply>
+    <worleynoise2d name="pb_dist" type="float"><input name="texcoord" type="vector2" nodename="uv_pb" /></worleynoise2d>
+    <multiply name="uv_pbs" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="300" /></multiply>
+    <noise2d name="pb_size" type="float"><input name="texcoord" type="vector2" nodename="uv_pbs" /><input name="amplitude" type="float" value="0.3" /></noise2d>
+    <add name="pb_r" type="float"><input name="in1" type="float" nodename="pb_size" /><input name="in2" type="float" value="0.12" /></add>
+    <subtract name="pb_d" type="float"><input name="in1" type="float" nodename="pb_r" /><input name="in2" type="float" nodename="pb_dist" /></subtract>
+    <smoothstep name="pore_b" type="float"><input name="in" type="float" nodename="pb_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.12" /></smoothstep>
+    <!-- Sand grit, ~0.7 mm. -->
+    <multiply name="uv_grit" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="1400" /></multiply>
+    <fractal2d name="grit" type="float"><input name="texcoord" type="vector2" nodename="uv_grit" /><input name="octaves" type="integer" value="2" /></fractal2d>
+    <!-- Sand grains: worley domes on a 1.5 mm grid, 0..1 (1 at grain top). -->
+    <multiply name="uv_sand" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="650" /></multiply>
+    <worleynoise2d name="sand_dist" type="float"><input name="texcoord" type="vector2" nodename="uv_sand" /></worleynoise2d>
+    <smoothstep name="sand_edge" type="float"><input name="in" type="float" nodename="sand_dist" /><input name="low" type="float" value="0.1" /><input name="high" type="float" value="0.6" /></smoothstep>
+    <subtract name="sand" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="sand_edge" /></subtract>
+    <!-- Face undulation, ~4 cm. -->
+    <multiply name="uv_und" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="25" /></multiply>
+    <fractal2d name="und" type="float"><input name="texcoord" type="vector2" nodename="uv_und" /><input name="octaves" type="integer" value="3" /></fractal2d>
+
+    <!-- Face height (m): 0.4 mm undulation, 0.15 mm grit, 1.2 mm and 0.5 mm deep voids. -->
+    <multiply name="h_und" type="float"><input name="in1" type="float" nodename="und" /><input name="in2" type="float" value="0.0004" /></multiply>
+    <multiply name="h_grit" type="float"><input name="in1" type="float" nodename="grit" /><input name="in2" type="float" value="0.00015" /></multiply>
+    <multiply name="h_pa" type="float"><input name="in1" type="float" nodename="pore_a" /><input name="in2" type="float" value="-0.0015" /></multiply>
+    <multiply name="h_pb" type="float"><input name="in1" type="float" nodename="pore_b" /><input name="in2" type="float" value="-0.0005" /></multiply>
+    <multiply name="h_sand" type="float"><input name="in1" type="float" nodename="sand" /><input name="in2" type="float" value="0.0003" /></multiply>
+    <add name="h_f0" type="float"><input name="in1" type="float" nodename="h_und" /><input name="in2" type="float" nodename="h_grit" /></add>
+    <add name="h_f1" type="float"><input name="in1" type="float" nodename="h_f0" /><input name="in2" type="float" nodename="h_sand" /></add>
+    <add name="h_f2" type="float"><input name="in1" type="float" nodename="h_pa" /><input name="in2" type="float" nodename="h_pb" /></add>
+    <add name="h_face" type="float"><input name="in1" type="float" nodename="h_f1" /><input name="in2" type="float" nodename="h_f2" /></add>
+    <!-- Block drops 3.5 mm over its rounded/chipped arris. -->
+    <subtract name="prof_drop" type="float"><input name="in1" type="float" nodename="block_prof" /><input name="in2" type="float" value="1" /></subtract>
+    <multiply name="h_edge" type="float"><input name="in1" type="float" nodename="prof_drop" /><input name="in2" type="float" value="0.0035" /></multiply>
+    <add name="h_block" type="float"><input name="in1" type="float" nodename="h_face" /><input name="in2" type="float" nodename="h_edge" /></add>
+
+    <!-- Concave-tooled mortar: 5.5 mm deep at the joint centre, 3.5 mm at its edges, 0.12 mm sand grains, 0.1 mm grit, 0.3 mm pinholes. -->
+    <divide name="dn" type="float"><input name="in1" type="float" nodename="d" /><input name="in2" type="float" value="0.005" /></divide>
+    <multiply name="dn2" type="float"><input name="in1" type="float" nodename="dn" /><input name="in2" type="float" nodename="dn" /></multiply>
+    <multiply name="m_curve" type="float"><input name="in1" type="float" nodename="dn2" /><input name="in2" type="float" value="0.002" /></multiply>
+    <multiply name="h_mgrit" type="float"><input name="in1" type="float" nodename="sand" /><input name="in2" type="float" value="0.00012" /></multiply>
+    <multiply name="h_mgrit2" type="float"><input name="in1" type="float" nodename="grit" /><input name="in2" type="float" value="0.0001" /></multiply>
+    <multiply name="h_mpit" type="float"><input name="in1" type="float" nodename="pore_b" /><input name="in2" type="float" value="-0.0003" /></multiply>
+    <add name="m_t1" type="float"><input name="in1" type="float" nodename="h_mgrit" /><input name="in2" type="float" nodename="h_mgrit2" /></add>
+    <add name="m_t" type="float"><input name="in1" type="float" nodename="m_t1" /><input name="in2" type="float" nodename="h_mpit" /></add>
+    <add name="m_a" type="float"><input name="in1" type="float" nodename="m_curve" /><input name="in2" type="float" nodename="m_t" /></add>
+    <subtract name="h_mortar" type="float"><input name="in1" type="float" nodename="m_a" /><input name="in2" type="float" value="0.0055" /></subtract>
+
+    <mix name="height" type="float"><input name="bg" type="float" nodename="h_block" /><input name="fg" type="float" nodename="h_mortar" /><input name="mix" type="float" nodename="mortar" /></mix>
+    <!-- scale 16 cancels heighttonormal's 1/16 Sobel factor; mm in, mm texcoord (see AUTHORING.md). -->
+    <multiply name="uv_mm" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="1000" /></multiply>
+    <multiply name="height_mm" type="float"><input name="in1" type="float" nodename="height" /><input name="in2" type="float" value="1000" /></multiply>
+    <heighttonormal name="n_tangent" type="vector3"><input name="in" type="float" nodename="height_mm" /><input name="scale" type="float" value="16" /><input name="texcoord" type="vector2" nodename="uv_mm" /></heighttonormal>
+    <normalmap name="n_world" type="vector3"><input name="in" type="vector3" nodename="n_tangent" /></normalmap>
+
+    <!-- Block colour: per-block tone, ~25 cm mottle, grit speckle, dark voids, lighter fresh chips. -->
+    <multiply name="uv_mottle" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="4" /></multiply>
+    <fractal2d name="mottle" type="float"><input name="texcoord" type="vector2" nodename="uv_mottle" /><input name="octaves" type="integer" value="4" /><input name="amplitude" type="float" value="0.1" /></fractal2d>
+    <mix name="col_block" type="color3"><input name="bg" type="color3" value="0.24, 0.235, 0.225" /><input name="fg" type="color3" value="0.32, 0.315, 0.30" /><input name="mix" type="float" nodename="block_rand" /></mix>
+    <multiply name="grit_tint" type="float"><input name="in1" type="float" nodename="grit" /><input name="in2" type="float" value="0.12" /></multiply>
+    <add name="bf_a" type="float"><input name="in1" type="float" nodename="grit_tint" /><input name="in2" type="float" nodename="mottle" /></add>
+    <add name="bf" type="float"><input name="in1" type="float" nodename="bf_a" /><input name="in2" type="float" value="1" /></add>
+    <multiply name="col_block_t" type="color3"><input name="in1" type="color3" nodename="col_block" /><input name="in2" type="float" nodename="bf" /></multiply>
+    <max name="pores" type="float"><input name="in1" type="float" nodename="pore_a" /><input name="in2" type="float" nodename="pore_b" /></max>
+    <multiply name="pore_dark" type="float"><input name="in1" type="float" nodename="pores" /><input name="in2" type="float" value="0.45" /></multiply>
+    <mix name="col_block_p" type="color3"><input name="bg" type="color3" nodename="col_block_t" /><input name="fg" type="color3" value="0.09, 0.088, 0.085" /><input name="mix" type="float" nodename="pore_dark" /></mix>
+    <multiply name="chip_light" type="float"><input name="in1" type="float" nodename="chip_zone" /><input name="in2" type="float" value="0.15" /></multiply>
+    <mix name="col_block_c" type="color3"><input name="bg" type="color3" nodename="col_block_p" /><input name="fg" type="color3" value="0.36, 0.355, 0.345" /><input name="mix" type="float" nodename="chip_light" /></mix>
+    <!-- Mortar colour: slightly warmer, lighter grey, fine speckle. -->
+    <multiply name="mgrit_tint" type="float"><input name="in1" type="float" nodename="grit" /><input name="in2" type="float" value="0.12" /></multiply>
+    <add name="mf" type="float"><input name="in1" type="float" nodename="mgrit_tint" /><input name="in2" type="float" value="1" /></add>
+    <multiply name="col_mortar" type="color3"><input name="in1" type="color3" value="0.27, 0.265, 0.25" /><input name="in2" type="float" nodename="mf" /></multiply>
+    <mix name="base_color" type="color3"><input name="bg" type="color3" nodename="col_block_c" /><input name="fg" type="color3" nodename="col_mortar" /><input name="mix" type="float" nodename="mortar" /></mix>
+
+    <constant name="metalness" type="float"><input name="value" type="float" value="0" /></constant>
+
+    <!-- Roughness: block 0.9, voids 0.97, tooled mortar 0.86. -->
+    <mix name="rough_block" type="float"><input name="bg" type="float" value="0.9" /><input name="fg" type="float" value="0.97" /><input name="mix" type="float" nodename="pores" /></mix>
+    <mix name="roughness" type="float"><input name="bg" type="float" nodename="rough_block" /><input name="fg" type="float" value="0.86" /><input name="mix" type="float" nodename="mortar" /></mix>
+
+    <output name="base_color_out" type="color3" nodename="base_color" />
+    <output name="roughness_out" type="float" nodename="roughness" />
+    <output name="normal_out" type="vector3" nodename="n_world" />
+    <output name="metalness_out" type="float" nodename="metalness" />
+  </nodegraph>
+  <standard_surface name="SR_cmu_block" type="surfaceshader">
+    <input name="base" type="float" value="1" />
+    <input name="base_color" type="color3" nodegraph="NG_cmu_block" output="base_color_out" />
+    <input name="specular" type="float" value="0.5" />
+    <input name="specular_IOR" type="float" value="1.5" />
+    <input name="specular_roughness" type="float" nodegraph="NG_cmu_block" output="roughness_out" />
+    <input name="metalness" type="float" nodegraph="NG_cmu_block" output="metalness_out" />
+    <input name="normal" type="vector3" nodegraph="NG_cmu_block" output="normal_out" />
+  </standard_surface>
+  <surfacematerial name="M_cmu_block" type="material"><input name="surfaceshader" type="surfaceshader" nodename="SR_cmu_block" /></surfacematerial>
+</materialx>

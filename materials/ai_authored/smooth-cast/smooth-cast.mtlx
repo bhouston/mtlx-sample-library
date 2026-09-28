@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!-- Smooth cast-in-place concrete. Texcoords are meters: UV 0..1 = 1 m. -->
+  <nodegraph name="NG_smooth_cast">
+    <texcoord name="uv" type="vector2" />
+
+    <!-- Broad cement mottling, ~25 cm blotches. fractal2d is signed (-1..1): remap to 0..1. -->
+    <multiply name="uv_mottle" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="4" /></multiply>
+    <fractal2d name="mottle_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_mottle" /><input name="octaves" type="integer" value="5" /><input name="diminish" type="float" value="0.55" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <add name="mottle" type="float"><input name="in1" type="float" nodename="mottle_raw" /><input name="in2" type="float" value="0.5" /></add>
+
+    <!-- Fine sand grain, ~3 mm. -->
+    <multiply name="uv_grain" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="300" /></multiply>
+    <fractal2d name="grain" type="float"><input name="texcoord" type="vector2" nodename="uv_grain" /><input name="octaves" type="integer" value="3" /></fractal2d>
+
+    <!-- Bug holes: worley pits on a 3 cm grid. A continuous noise field sets each pit's radius (negative = no pit),
+         so sizes vary smoothly and no pit is clipped at a cell border. -->
+    <multiply name="uv_pore" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="33" /></multiply>
+    <worleynoise2d name="pore_dist" type="float"><input name="texcoord" type="vector2" nodename="uv_pore" /></worleynoise2d>
+    <multiply name="uv_psize" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="41" /></multiply>
+    <noise2d name="psize_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_psize" /></noise2d>
+    <multiply name="psize_s" type="float"><input name="in1" type="float" nodename="psize_raw" /><input name="in2" type="float" value="0.22" /></multiply>
+    <subtract name="pore_r" type="float"><input name="in1" type="float" nodename="psize_s" /><input name="in2" type="float" value="0.04" /></subtract>
+    <subtract name="pore_d" type="float"><input name="in1" type="float" nodename="pore_r" /><input name="in2" type="float" nodename="pore_dist" /></subtract>
+    <smoothstep name="pore" type="float"><input name="in" type="float" nodename="pore_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.03" /></smoothstep>
+
+    <!-- Mid-scale paste variation, ~5 cm. -->
+    <multiply name="uv_mid" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="18" /></multiply>
+    <fractal2d name="mid" type="float"><input name="texcoord" type="vector2" nodename="uv_mid" /><input name="octaves" type="integer" value="3" /></fractal2d>
+
+    <!-- Height in meters: 1.5 mm undulation, 0.15 mm grain, 2 mm deep pores. -->
+    <multiply name="h_mottle" type="float"><input name="in1" type="float" nodename="mottle" /><input name="in2" type="float" value="0.0015" /></multiply>
+    <multiply name="h_grain" type="float"><input name="in1" type="float" nodename="grain" /><input name="in2" type="float" value="0.00015" /></multiply>
+    <multiply name="h_pore" type="float"><input name="in1" type="float" nodename="pore" /><input name="in2" type="float" value="-0.002" /></multiply>
+    <add name="h_a" type="float"><input name="in1" type="float" nodename="h_mottle" /><input name="in2" type="float" nodename="h_grain" /></add>
+    <add name="height" type="float"><input name="in1" type="float" nodename="h_a" /><input name="in2" type="float" nodename="h_pore" /></add>
+    <!-- scale 16 cancels heighttonormal's 1/16 Sobel factor, so slopes are physical in meters. -->
+    <!-- three.js heighttonormal treats |n|^2 < 1e-12 as degenerate, which meter-scale UV derivatives trip,
+         so feed it millimeters (height and texcoord both x1000; slope unchanged). -->
+    <multiply name="uv_mm" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="1000" /></multiply>
+    <multiply name="height_mm" type="float"><input name="in1" type="float" nodename="height" /><input name="in2" type="float" value="1000" /></multiply>
+    <heighttonormal name="n_tangent" type="vector3"><input name="in" type="float" nodename="height_mm" /><input name="scale" type="float" value="16" /><input name="texcoord" type="vector2" nodename="uv_mm" /></heighttonormal>
+    <normalmap name="n_world" type="vector3"><input name="in" type="vector3" nodename="n_tangent" /></normalmap>
+
+    <!-- Color: grey with slight warm cast, mottled, grain speckle, dark pores. -->
+    <mix name="col_mottle" type="color3"><input name="bg" type="color3" value="0.34, 0.33, 0.315" /><input name="fg" type="color3" value="0.46, 0.45, 0.43" /><input name="mix" type="float" nodename="mottle" /></mix>
+    <multiply name="grain_tint" type="float"><input name="in1" type="float" nodename="grain" /><input name="in2" type="float" value="0.12" /></multiply>
+    <multiply name="mid_tint" type="float"><input name="in1" type="float" nodename="mid" /><input name="in2" type="float" value="0.08" /></multiply>
+    <add name="tints" type="float"><input name="in1" type="float" nodename="grain_tint" /><input name="in2" type="float" nodename="mid_tint" /></add>
+    <add name="grain_factor" type="float"><input name="in1" type="float" nodename="tints" /><input name="in2" type="float" value="1" /></add>
+    <multiply name="col_grain" type="color3"><input name="in1" type="color3" nodename="col_mottle" /><input name="in2" type="float" nodename="grain_factor" /></multiply>
+    <mix name="base_color" type="color3"><input name="bg" type="color3" nodename="col_grain" /><input name="fg" type="color3" value="0.17, 0.165, 0.16" /><input name="mix" type="float" nodename="pore" /></mix>
+
+    <!-- Dielectric throughout. -->
+    <constant name="metalness" type="float"><input name="value" type="float" value="0" /></constant>
+
+    <!-- Roughness 0.78..0.9, rougher in pores. -->
+    <mix name="rough_mottle" type="float"><input name="bg" type="float" value="0.9" /><input name="fg" type="float" value="0.78" /><input name="mix" type="float" nodename="mottle" /></mix>
+    <mix name="roughness" type="float"><input name="bg" type="float" nodename="rough_mottle" /><input name="fg" type="float" value="0.97" /><input name="mix" type="float" nodename="pore" /></mix>
+
+    <output name="base_color_out" type="color3" nodename="base_color" />
+    <output name="roughness_out" type="float" nodename="roughness" />
+    <output name="normal_out" type="vector3" nodename="n_world" />
+    <output name="metalness_out" type="float" nodename="metalness" />
+  </nodegraph>
+  <standard_surface name="SR_smooth_cast" type="surfaceshader">
+    <input name="base" type="float" value="1" />
+    <input name="base_color" type="color3" nodegraph="NG_smooth_cast" output="base_color_out" />
+    <input name="specular" type="float" value="0.5" />
+    <input name="specular_IOR" type="float" value="1.5" />
+    <input name="specular_roughness" type="float" nodegraph="NG_smooth_cast" output="roughness_out" />
+    <input name="metalness" type="float" nodegraph="NG_smooth_cast" output="metalness_out" />
+    <input name="normal" type="vector3" nodegraph="NG_smooth_cast" output="normal_out" />
+  </standard_surface>
+  <surfacematerial name="M_smooth_cast" type="material"><input name="surfaceshader" type="surfaceshader" nodename="SR_smooth_cast" /></surfacematerial>
+</materialx>

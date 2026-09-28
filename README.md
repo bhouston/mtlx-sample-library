@@ -16,11 +16,12 @@ The included viewer assets are provided so contributors can replicate a consiste
   - `san_giuseppe_bridge_2k.hdr` 
   - `ShaderBall.glb`
 - `materials/`
-  - `open_pbr_surface/`
-  - `gltf_pbr/`
-  - `standard_surface/`
+  - `surfaces/` (`open_pbr_surface/`, `gltf_pbr/`, `standard_surface/`)
+  - `nodes/`: per-node test materials
+  - `showcase/`
+  - `ai_authored/`: fully procedural materials authored by AI agents (see its [README](materials/ai_authored/README.md))
 
-Each material lives in its own directory under one of the three surface-type groups.
+Each material lives in its own directory, `<group>/<name>/<name>.mtlx`.
 Material directories intentionally omit the group prefix to avoid duplication (for example, `materials/gltf_pbr/gold` rather than `materials/gltf_pbr/gltf_pbr_gold`).
 
 ## Source Provenance

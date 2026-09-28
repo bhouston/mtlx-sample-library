@@ -1,0 +1,246 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!-- Ground and polished concrete floor with exposed aggregate cross-sections. Texcoords are meters: UV 0..1 = 1 m. -->
+  <nodegraph name="NG_polished_floor">
+    <texcoord name="uv" type="vector2" />
+
+    <!-- Aggregate density varies over ~20 cm (signed noise shifts each layer's keep threshold). -->
+    <multiply name="uv_dens" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="3" /></multiply>
+    <noise2d name="dens" type="float"><input name="texcoord" type="vector2" nodename="uv_dens" /><input name="amplitude" type="float" value="0.6" /></noise2d>
+    <add name="a_thr" type="float"><input name="in1" type="float" nodename="dens" /><input name="in2" type="float" value="0.2" /></add>
+    <add name="b_thr" type="float"><input name="in1" type="float" nodename="dens" /><input name="in2" type="float" value="0.3" /></add>
+    <add name="c_thr" type="float"><input name="in1" type="float" nodename="dens" /><input name="in2" type="float" value="0.4" /></add>
+
+    <!-- ===== Aggregate A: large stones, 12 mm cells (85/m), stones ~5..14 mm. =====
+         Voronoi interior (F2-F1 > gap) gives straight, angular sides; F1 < radius trims the corners.
+         worleynoise2d style=1 returns one random value per Voronoi cell, used for size, presence and color. -->
+    <rotate2d name="a_rot" type="vector2"><input name="in" type="vector2" nodename="uv" /><input name="amount" type="float" value="0" /></rotate2d>
+    <multiply name="a_uv" type="vector2"><input name="in1" type="vector2" nodename="a_rot" /><input name="in2" type="float" value="85" /></multiply>
+    <multiply name="a_wf" type="vector2"><input name="in1" type="vector2" nodename="a_uv" /><input name="in2" type="float" value="2.3" /></multiply>
+    <noise2d name="a_warp" type="vector2"><input name="texcoord" type="vector2" nodename="a_wf" /><input name="amplitude" type="vector2" value="0.1, 0.1" /></noise2d>
+    <add name="a_uvw" type="vector2"><input name="in1" type="vector2" nodename="a_uv" /><input name="in2" type="vector2" nodename="a_warp" /></add>
+    <worleynoise2d name="a_f" type="vector2"><input name="texcoord" type="vector2" nodename="a_uvw" /></worleynoise2d>
+    <separate2 name="a_fs" type="multioutput"><input name="in" type="vector2" nodename="a_f" /><output name="outx" type="float" /><output name="outy" type="float" /></separate2>
+    <subtract name="a_edge" type="float"><input name="in1" type="float" nodename="a_fs" output="outy" /><input name="in2" type="float" nodename="a_fs" output="outx" /></subtract>
+    <worleynoise2d name="a_id" type="float"><input name="texcoord" type="vector2" nodename="a_uvw" /><input name="style" type="integer" value="1" /></worleynoise2d>
+    <multiply name="a_rsz0" type="float"><input name="in1" type="float" nodename="a_id" /><input name="in2" type="float" value="7.31" /></multiply>
+    <modulo name="a_rsz" type="float"><input name="in1" type="float" nodename="a_rsz0" /><input name="in2" type="float" value="1" /></modulo>
+    <multiply name="a_rkp0" type="float"><input name="in1" type="float" nodename="a_id" /><input name="in2" type="float" value="13.7" /></multiply>
+    <modulo name="a_rkp" type="float"><input name="in1" type="float" nodename="a_rkp0" /><input name="in2" type="float" value="1" /></modulo>
+    <multiply name="a_rad0" type="float"><input name="in1" type="float" nodename="a_rsz" /><input name="in2" type="float" value="0.35" /></multiply>
+    <add name="a_rad" type="float"><input name="in1" type="float" nodename="a_rad0" /><input name="in2" type="float" value="0.38" /></add>
+    <subtract name="a_d1" type="float"><input name="in1" type="float" nodename="a_edge" /><input name="in2" type="float" value="0.1" /></subtract>
+    <subtract name="a_d2" type="float"><input name="in1" type="float" nodename="a_rad" /><input name="in2" type="float" nodename="a_fs" output="outx" /></subtract>
+    <min name="a_d" type="float"><input name="in1" type="float" nodename="a_d1" /><input name="in2" type="float" nodename="a_d2" /></min>
+    <smoothstep name="a_shape" type="float"><input name="in" type="float" nodename="a_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.04" /></smoothstep>
+    <ifgreater name="a_keep" type="float"><input name="value1" type="float" nodename="a_rkp" /><input name="value2" type="float" nodename="a_thr" /><input name="in1" type="float" value="1" /><input name="in2" type="float" value="0" /></ifgreater>
+    <multiply name="a_mask" type="float"><input name="in1" type="float" nodename="a_shape" /><input name="in2" type="float" nodename="a_keep" /></multiply>
+
+    <!-- ===== Aggregate B: medium stones, 5.5 mm cells (180/m), stones ~2.5..6 mm. ===== -->
+    <rotate2d name="b_rot" type="vector2"><input name="in" type="vector2" nodename="uv" /><input name="amount" type="float" value="37" /></rotate2d>
+    <multiply name="b_uv0" type="vector2"><input name="in1" type="vector2" nodename="b_rot" /><input name="in2" type="float" value="180" /></multiply>
+    <add name="b_uv" type="vector2"><input name="in1" type="vector2" nodename="b_uv0" /><input name="in2" type="vector2" value="17.3, 41.9" /></add>
+    <multiply name="b_wf" type="vector2"><input name="in1" type="vector2" nodename="b_uv" /><input name="in2" type="float" value="2.1" /></multiply>
+    <noise2d name="b_warp" type="vector2"><input name="texcoord" type="vector2" nodename="b_wf" /><input name="amplitude" type="vector2" value="0.1, 0.1" /></noise2d>
+    <add name="b_uvw" type="vector2"><input name="in1" type="vector2" nodename="b_uv" /><input name="in2" type="vector2" nodename="b_warp" /></add>
+    <worleynoise2d name="b_f" type="vector2"><input name="texcoord" type="vector2" nodename="b_uvw" /></worleynoise2d>
+    <separate2 name="b_fs" type="multioutput"><input name="in" type="vector2" nodename="b_f" /><output name="outx" type="float" /><output name="outy" type="float" /></separate2>
+    <subtract name="b_edge" type="float"><input name="in1" type="float" nodename="b_fs" output="outy" /><input name="in2" type="float" nodename="b_fs" output="outx" /></subtract>
+    <worleynoise2d name="b_id" type="float"><input name="texcoord" type="vector2" nodename="b_uvw" /><input name="style" type="integer" value="1" /></worleynoise2d>
+    <multiply name="b_rsz0" type="float"><input name="in1" type="float" nodename="b_id" /><input name="in2" type="float" value="7.31" /></multiply>
+    <modulo name="b_rsz" type="float"><input name="in1" type="float" nodename="b_rsz0" /><input name="in2" type="float" value="1" /></modulo>
+    <multiply name="b_rkp0" type="float"><input name="in1" type="float" nodename="b_id" /><input name="in2" type="float" value="13.7" /></multiply>
+    <modulo name="b_rkp" type="float"><input name="in1" type="float" nodename="b_rkp0" /><input name="in2" type="float" value="1" /></modulo>
+    <multiply name="b_rad0" type="float"><input name="in1" type="float" nodename="b_rsz" /><input name="in2" type="float" value="0.3" /></multiply>
+    <add name="b_rad" type="float"><input name="in1" type="float" nodename="b_rad0" /><input name="in2" type="float" value="0.3" /></add>
+    <subtract name="b_d1" type="float"><input name="in1" type="float" nodename="b_edge" /><input name="in2" type="float" value="0.12" /></subtract>
+    <subtract name="b_d2" type="float"><input name="in1" type="float" nodename="b_rad" /><input name="in2" type="float" nodename="b_fs" output="outx" /></subtract>
+    <min name="b_d" type="float"><input name="in1" type="float" nodename="b_d1" /><input name="in2" type="float" nodename="b_d2" /></min>
+    <smoothstep name="b_shape" type="float"><input name="in" type="float" nodename="b_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.05" /></smoothstep>
+    <ifgreater name="b_keep" type="float"><input name="value1" type="float" nodename="b_rkp" /><input name="value2" type="float" nodename="b_thr" /><input name="in1" type="float" value="1" /><input name="in2" type="float" value="0" /></ifgreater>
+    <multiply name="b_mask" type="float"><input name="in1" type="float" nodename="b_shape" /><input name="in2" type="float" nodename="b_keep" /></multiply>
+
+    <!-- ===== Aggregate C: small stones / coarse sand, 3 mm cells (330/m), stones ~1.5..3 mm. ===== -->
+    <rotate2d name="c_rot" type="vector2"><input name="in" type="vector2" nodename="uv" /><input name="amount" type="float" value="-61" /></rotate2d>
+    <multiply name="c_uv0" type="vector2"><input name="in1" type="vector2" nodename="c_rot" /><input name="in2" type="float" value="330" /></multiply>
+    <add name="c_uv" type="vector2"><input name="in1" type="vector2" nodename="c_uv0" /><input name="in2" type="vector2" value="-53.1, 7.7" /></add>
+    <worleynoise2d name="c_f" type="vector2"><input name="texcoord" type="vector2" nodename="c_uv" /></worleynoise2d>
+    <separate2 name="c_fs" type="multioutput"><input name="in" type="vector2" nodename="c_f" /><output name="outx" type="float" /><output name="outy" type="float" /></separate2>
+    <subtract name="c_edge" type="float"><input name="in1" type="float" nodename="c_fs" output="outy" /><input name="in2" type="float" nodename="c_fs" output="outx" /></subtract>
+    <worleynoise2d name="c_id" type="float"><input name="texcoord" type="vector2" nodename="c_uv" /><input name="style" type="integer" value="1" /></worleynoise2d>
+    <multiply name="c_rkp0" type="float"><input name="in1" type="float" nodename="c_id" /><input name="in2" type="float" value="13.7" /></multiply>
+    <modulo name="c_rkp" type="float"><input name="in1" type="float" nodename="c_rkp0" /><input name="in2" type="float" value="1" /></modulo>
+    <subtract name="c_d1" type="float"><input name="in1" type="float" nodename="c_edge" /><input name="in2" type="float" value="0.2" /></subtract>
+    <subtract name="c_d2" type="float"><input name="in1" type="float" value="0.35" /><input name="in2" type="float" nodename="c_fs" output="outx" /></subtract>
+    <min name="c_d" type="float"><input name="in1" type="float" nodename="c_d1" /><input name="in2" type="float" nodename="c_d2" /></min>
+    <smoothstep name="c_shape" type="float"><input name="in" type="float" nodename="c_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.06" /></smoothstep>
+    <ifgreater name="c_keep" type="float"><input name="value1" type="float" nodename="c_rkp" /><input name="value2" type="float" nodename="c_thr" /><input name="in1" type="float" value="1" /><input name="in2" type="float" value="0" /></ifgreater>
+    <multiply name="c_mask" type="float"><input name="in1" type="float" nodename="c_shape" /><input name="in2" type="float" nodename="c_keep" /></multiply>
+
+    <!-- Combined stone mask; the topmost layer's cell id picks the stone color. -->
+    <max name="stone_bc" type="float"><input name="in1" type="float" nodename="b_mask" /><input name="in2" type="float" nodename="c_mask" /></max>
+    <max name="stone" type="float"><input name="in1" type="float" nodename="a_mask" /><input name="in2" type="float" nodename="stone_bc" /></max>
+    <!-- Small stones are mostly quartz sand/grey grit: remap their id past the near-black range, so they don't read as holes. -->
+    <multiply name="c_id_s" type="float"><input name="in1" type="float" nodename="c_id" /><input name="in2" type="float" value="0.75" /></multiply>
+    <add name="c_id2" type="float"><input name="in1" type="float" nodename="c_id_s" /><input name="in2" type="float" value="0.25" /></add>
+    <ifgreater name="id_bc" type="float"><input name="value1" type="float" nodename="b_mask" /><input name="value2" type="float" value="0.5" /><input name="in1" type="float" nodename="b_id" /><input name="in2" type="float" nodename="c_id2" /></ifgreater>
+    <ifgreater name="stone_id" type="float"><input name="value1" type="float" nodename="a_mask" /><input name="value2" type="float" value="0.5" /><input name="in1" type="float" nodename="a_id" /><input name="in2" type="float" nodename="id_bc" /></ifgreater>
+    <multiply name="stone_l0" type="float"><input name="in1" type="float" nodename="stone_id" /><input name="in2" type="float" value="5.17" /></multiply>
+    <modulo name="stone_l" type="float"><input name="in1" type="float" nodename="stone_l0" /><input name="in2" type="float" value="1" /></modulo>
+
+    <!-- Stone palette: near-black basalt 30%, grey granite/limestone 35%, tan/brown 25%, pale quartz 10%. -->
+    <mix name="col_dark" type="color3"><input name="bg" type="color3" value="0.045, 0.044, 0.042" /><input name="fg" type="color3" value="0.11, 0.105, 0.1" /><input name="mix" type="float" nodename="stone_l" /></mix>
+    <mix name="col_grey" type="color3"><input name="bg" type="color3" value="0.17, 0.17, 0.17" /><input name="fg" type="color3" value="0.42, 0.41, 0.4" /><input name="mix" type="float" nodename="stone_l" /></mix>
+    <mix name="col_tan" type="color3"><input name="bg" type="color3" value="0.2, 0.16, 0.12" /><input name="fg" type="color3" value="0.44, 0.38, 0.3" /><input name="mix" type="float" nodename="stone_l" /></mix>
+    <mix name="col_pale" type="color3"><input name="bg" type="color3" value="0.5, 0.48, 0.45" /><input name="fg" type="color3" value="0.62, 0.6, 0.57" /><input name="mix" type="float" nodename="stone_l" /></mix>
+    <ifgreater name="col_s1" type="color3"><input name="value1" type="float" nodename="stone_id" /><input name="value2" type="float" value="0.92" /><input name="in1" type="color3" nodename="col_pale" /><input name="in2" type="color3" nodename="col_tan" /></ifgreater>
+    <ifgreater name="col_s2" type="color3"><input name="value1" type="float" nodename="stone_id" /><input name="value2" type="float" value="0.75" /><input name="in1" type="color3" nodename="col_s1" /><input name="in2" type="color3" nodename="col_grey" /></ifgreater>
+    <ifgreater name="col_stone0" type="color3"><input name="value1" type="float" nodename="stone_id" /><input name="value2" type="float" value="0.25" /><input name="in1" type="color3" nodename="col_s2" /><input name="in2" type="color3" nodename="col_dark" /></ifgreater>
+    <!-- Mineral grain inside stones, ~1 mm. -->
+    <multiply name="uv_sgrain" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="900" /></multiply>
+    <fractal2d name="sgrain" type="float"><input name="texcoord" type="vector2" nodename="uv_sgrain" /><input name="octaves" type="integer" value="3" /></fractal2d>
+    <multiply name="uv_smot" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="250" /></multiply>
+    <fractal2d name="smot" type="float"><input name="texcoord" type="vector2" nodename="uv_smot" /><input name="octaves" type="integer" value="2" /></fractal2d>
+    <multiply name="smot_s" type="float"><input name="in1" type="float" nodename="smot" /><input name="in2" type="float" value="0.15" /></multiply>
+    <multiply name="sgrain_g" type="float"><input name="in1" type="float" nodename="sgrain" /><input name="in2" type="float" value="0.22" /></multiply>
+    <add name="sgrain_s" type="float"><input name="in1" type="float" nodename="sgrain_g" /><input name="in2" type="float" nodename="smot_s" /></add>
+    <add name="sgrain_f" type="float"><input name="in1" type="float" nodename="sgrain_s" /><input name="in2" type="float" value="1" /></add>
+    <multiply name="col_stone" type="color3"><input name="in1" type="color3" nodename="col_stone0" /><input name="in2" type="float" nodename="sgrain_f" /></multiply>
+
+    <!-- ===== Cement paste. Broad mottling ~30 cm, mid variation ~5 cm. ===== -->
+    <multiply name="uv_mottle" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="3" /></multiply>
+    <fractal2d name="mottle_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_mottle" /><input name="octaves" type="integer" value="5" /><input name="diminish" type="float" value="0.55" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <add name="mottle" type="float"><input name="in1" type="float" nodename="mottle_raw" /><input name="in2" type="float" value="0.5" /></add>
+    <multiply name="uv_mid" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="20" /></multiply>
+    <fractal2d name="mid" type="float"><input name="texcoord" type="vector2" nodename="uv_mid" /><input name="octaves" type="integer" value="3" /></fractal2d>
+    <mix name="col_paste0" type="color3"><input name="bg" type="color3" value="0.27, 0.27, 0.265" /><input name="fg" type="color3" value="0.42, 0.415, 0.405" /><input name="mix" type="float" nodename="mottle" /></mix>
+    <multiply name="mid_s" type="float"><input name="in1" type="float" nodename="mid" /><input name="in2" type="float" value="0.08" /></multiply>
+    <add name="mid_f" type="float"><input name="in1" type="float" nodename="mid_s" /><input name="in2" type="float" value="1" /></add>
+    <multiply name="col_paste1" type="color3"><input name="in1" type="color3" nodename="col_paste0" /><input name="in2" type="float" nodename="mid_f" /></multiply>
+
+    <!-- ===== Fine sand, 1.2 mm cells (830/m): scattered light and dark grains in the paste. ===== -->
+    <multiply name="s_uv" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="830" /></multiply>
+    <worleynoise2d name="s_f1" type="float"><input name="texcoord" type="vector2" nodename="s_uv" /></worleynoise2d>
+    <worleynoise2d name="s_id" type="float"><input name="texcoord" type="vector2" nodename="s_uv" /><input name="style" type="integer" value="1" /></worleynoise2d>
+    <multiply name="s_r0" type="float"><input name="in1" type="float" nodename="s_id" /><input name="in2" type="float" value="11.3" /></multiply>
+    <modulo name="s_r1" type="float"><input name="in1" type="float" nodename="s_r0" /><input name="in2" type="float" value="1" /></modulo>
+    <multiply name="s_r2" type="float"><input name="in1" type="float" nodename="s_r1" /><input name="in2" type="float" value="0.55" /></multiply>
+    <subtract name="s_rad" type="float"><input name="in1" type="float" nodename="s_r2" /><input name="in2" type="float" value="0.15" /></subtract>
+    <subtract name="s_d" type="float"><input name="in1" type="float" nodename="s_rad" /><input name="in2" type="float" nodename="s_f1" /></subtract>
+    <smoothstep name="s_shape" type="float"><input name="in" type="float" nodename="s_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.1" /></smoothstep>
+    <mix name="s_tone" type="color3"><input name="bg" type="color3" value="0.06, 0.058, 0.055" /><input name="fg" type="color3" value="0.5, 0.49, 0.47" /><input name="mix" type="float" nodename="s_id" /></mix>
+    <multiply name="s_amt" type="float"><input name="in1" type="float" nodename="s_shape" /><input name="in2" type="float" value="0.45" /></multiply>
+    <mix name="col_paste" type="color3"><input name="bg" type="color3" nodename="col_paste1" /><input name="fg" type="color3" nodename="s_tone" /><input name="mix" type="float" nodename="s_amt" /></mix>
+
+    <!-- ===== Air-void pits, 2.5 cm grid, 0.5..2 mm across, only in paste. ===== -->
+    <multiply name="uv_pore" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="40" /></multiply>
+    <worleynoise2d name="pore_dist" type="float"><input name="texcoord" type="vector2" nodename="uv_pore" /></worleynoise2d>
+    <multiply name="uv_psize" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="37" /></multiply>
+    <noise2d name="psize_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_psize" /></noise2d>
+    <multiply name="psize_s" type="float"><input name="in1" type="float" nodename="psize_raw" /><input name="in2" type="float" value="0.13" /></multiply>
+    <subtract name="pore_r" type="float"><input name="in1" type="float" nodename="psize_s" /><input name="in2" type="float" value="0.02" /></subtract>
+    <subtract name="pore_d" type="float"><input name="in1" type="float" nodename="pore_r" /><input name="in2" type="float" nodename="pore_dist" /></subtract>
+    <smoothstep name="pore0" type="float"><input name="in" type="float" nodename="pore_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.012" /></smoothstep>
+    <subtract name="paste" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="stone" /></subtract>
+    <multiply name="pore" type="float"><input name="in1" type="float" nodename="pore0" /><input name="in2" type="float" nodename="paste" /></multiply>
+
+    <!-- ===== Hairline scratches, ~0.3 mm wide: borders of Voronoi cells stretched to 25 cm x 1 cm (two directions).
+         A noise in the stretched cell space switches individual lines on in short runs; a ~15 cm noise clusters them.
+         Note: smoothstep with low > high does not invert in three.js, so lines use 1 - smoothstep. ===== -->
+    <rotate2d name="k_rot" type="vector2"><input name="in" type="vector2" nodename="uv" /><input name="amount" type="float" value="23" /></rotate2d>
+    <multiply name="k_uv0" type="vector2"><input name="in1" type="vector2" nodename="k_rot" /><input name="in2" type="vector2" value="4, 100" /></multiply>
+    <add name="k_uv" type="vector2"><input name="in1" type="vector2" nodename="k_uv0" /><input name="in2" type="vector2" value="0, 0" /></add>
+    <worleynoise2d name="k_f" type="vector2"><input name="texcoord" type="vector2" nodename="k_uv" /></worleynoise2d>
+    <separate2 name="k_fs" type="multioutput"><input name="in" type="vector2" nodename="k_f" /><output name="outx" type="float" /><output name="outy" type="float" /></separate2>
+    <subtract name="k_edge" type="float"><input name="in1" type="float" nodename="k_fs" output="outy" /><input name="in2" type="float" nodename="k_fs" output="outx" /></subtract>
+    <smoothstep name="k_edge_s" type="float"><input name="in" type="float" nodename="k_edge" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.03" /></smoothstep>
+    <subtract name="k_line" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="k_edge_s" /></subtract>
+    <multiply name="k_seg_uv" type="vector2"><input name="in1" type="vector2" nodename="k_uv" /><input name="in2" type="vector2" value="0.8, 1.1" /></multiply>
+    <noise2d name="k_seg0" type="float"><input name="texcoord" type="vector2" nodename="k_seg_uv" /></noise2d>
+    <smoothstep name="k_seg" type="float"><input name="in" type="float" nodename="k_seg0" /><input name="low" type="float" value="0.2" /><input name="high" type="float" value="0.4" /></smoothstep>
+    <multiply name="k_scr" type="float"><input name="in1" type="float" nodename="k_line" /><input name="in2" type="float" nodename="k_seg" /></multiply>
+    <rotate2d name="q_rot" type="vector2"><input name="in" type="vector2" nodename="uv" /><input name="amount" type="float" value="-52" /></rotate2d>
+    <multiply name="q_uv0" type="vector2"><input name="in1" type="vector2" nodename="q_rot" /><input name="in2" type="vector2" value="3, 70" /></multiply>
+    <add name="q_uv" type="vector2"><input name="in1" type="vector2" nodename="q_uv0" /><input name="in2" type="vector2" value="31.7, -12.3" /></add>
+    <worleynoise2d name="q_f" type="vector2"><input name="texcoord" type="vector2" nodename="q_uv" /></worleynoise2d>
+    <separate2 name="q_fs" type="multioutput"><input name="in" type="vector2" nodename="q_f" /><output name="outx" type="float" /><output name="outy" type="float" /></separate2>
+    <subtract name="q_edge" type="float"><input name="in1" type="float" nodename="q_fs" output="outy" /><input name="in2" type="float" nodename="q_fs" output="outx" /></subtract>
+    <smoothstep name="q_edge_s" type="float"><input name="in" type="float" nodename="q_edge" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.03" /></smoothstep>
+    <subtract name="q_line" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="q_edge_s" /></subtract>
+    <multiply name="q_seg_uv" type="vector2"><input name="in1" type="vector2" nodename="q_uv" /><input name="in2" type="vector2" value="0.8, 1.1" /></multiply>
+    <noise2d name="q_seg0" type="float"><input name="texcoord" type="vector2" nodename="q_seg_uv" /></noise2d>
+    <smoothstep name="q_seg" type="float"><input name="in" type="float" nodename="q_seg0" /><input name="low" type="float" value="0.2" /><input name="high" type="float" value="0.4" /></smoothstep>
+    <multiply name="q_scr" type="float"><input name="in1" type="float" nodename="q_line" /><input name="in2" type="float" nodename="q_seg" /></multiply>
+    <max name="kq" type="float"><input name="in1" type="float" nodename="k_scr" /><input name="in2" type="float" nodename="q_scr" /></max>
+    <multiply name="uv_kmask" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="6" /></multiply>
+    <noise2d name="k_mask0" type="float"><input name="texcoord" type="vector2" nodename="uv_kmask" /></noise2d>
+    <smoothstep name="k_mask" type="float"><input name="in" type="float" nodename="k_mask0" /><input name="low" type="float" value="-0.1" /><input name="high" type="float" value="0.3" /></smoothstep>
+    <multiply name="scratch" type="float"><input name="in1" type="float" nodename="kq" /><input name="in2" type="float" nodename="k_mask" /></multiply>
+
+    <!-- ===== Height in meters: 0.3 mm long waviness, 0.4 mm pits, 0.01 mm scratches. ===== -->
+    <multiply name="uv_wave" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="3" /></multiply>
+    <fractal2d name="wave" type="float"><input name="texcoord" type="vector2" nodename="uv_wave" /><input name="octaves" type="integer" value="3" /></fractal2d>
+    <multiply name="h_wave" type="float"><input name="in1" type="float" nodename="wave" /><input name="in2" type="float" value="0.0003" /></multiply>
+    <multiply name="h_pore" type="float"><input name="in1" type="float" nodename="pore" /><input name="in2" type="float" value="-0.0004" /></multiply>
+    <multiply name="h_scratch" type="float"><input name="in1" type="float" nodename="scratch" /><input name="in2" type="float" value="-0.000015" /></multiply>
+    <add name="h_a" type="float"><input name="in1" type="float" nodename="h_wave" /><input name="in2" type="float" nodename="h_pore" /></add>
+    <add name="height" type="float"><input name="in1" type="float" nodename="h_a" /><input name="in2" type="float" nodename="h_scratch" /></add>
+    <!-- heighttonormal needs millimeters (three.js degenerate-derivative check); scale 16 cancels the 1/16 Sobel factor. -->
+    <multiply name="uv_mm" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="1000" /></multiply>
+    <multiply name="height_mm" type="float"><input name="in1" type="float" nodename="height" /><input name="in2" type="float" value="1000" /></multiply>
+    <heighttonormal name="n_tangent" type="vector3"><input name="in" type="float" nodename="height_mm" /><input name="scale" type="float" value="16" /><input name="texcoord" type="vector2" nodename="uv_mm" /></heighttonormal>
+    <normalmap name="n_world" type="vector3"><input name="in" type="vector3" nodename="n_tangent" /></normalmap>
+
+    <!-- ===== Base color. ===== -->
+    <mix name="col_mix" type="color3"><input name="bg" type="color3" nodename="col_paste" /><input name="fg" type="color3" nodename="col_stone" /><input name="mix" type="float" nodename="stone" /></mix>
+    <!-- Scratches scatter light: a faint whitish line. -->
+    <multiply name="scr_tint" type="float"><input name="in1" type="float" nodename="scratch" /><input name="in2" type="float" value="0.08" /></multiply>
+    <add name="col_scr" type="color3"><input name="in1" type="color3" nodename="col_mix" /><input name="in2" type="float" nodename="scr_tint" /></add>
+    <mix name="base_color" type="color3"><input name="bg" type="color3" nodename="col_scr" /><input name="fg" type="color3" value="0.1, 0.098, 0.095" /><input name="mix" type="float" nodename="pore" /></mix>
+
+    <constant name="metalness" type="float"><input name="value" type="float" value="0" /></constant>
+
+    <!-- ===== Roughness 0.15..0.35: hazy patches ~30 cm, grinder swirl rings (8 mm pitch around ~25 cm loops),
+         stones polish slightly better than paste, scratches and pits rougher. ===== -->
+    <multiply name="uv_haze" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="2.5" /></multiply>
+    <fractal2d name="haze_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_haze" /><input name="octaves" type="integer" value="4" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <add name="haze0" type="float"><input name="in1" type="float" nodename="haze_raw" /><input name="in2" type="float" value="0.5" /></add>
+    <smoothstep name="haze" type="float"><input name="in" type="float" nodename="haze0" /><input name="low" type="float" value="0.35" /><input name="high" type="float" value="0.75" /></smoothstep>
+
+    <multiply name="w_uv" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="4" /></multiply>
+    <multiply name="w_wf" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="6" /></multiply>
+    <noise2d name="w_warp" type="vector2"><input name="texcoord" type="vector2" nodename="w_wf" /><input name="amplitude" type="vector2" value="0.12, 0.12" /></noise2d>
+    <add name="w_uvw" type="vector2"><input name="in1" type="vector2" nodename="w_uv" /><input name="in2" type="vector2" nodename="w_warp" /></add>
+    <worleynoise2d name="w_f1" type="float"><input name="texcoord" type="vector2" nodename="w_uvw" /></worleynoise2d>
+    <multiply name="w_ph" type="float"><input name="in1" type="float" nodename="w_f1" /><input name="in2" type="float" value="188.5" /></multiply>
+    <sin name="w_sin" type="float"><input name="in" type="float" nodename="w_ph" /></sin>
+    <smoothstep name="w_ring" type="float"><input name="in" type="float" nodename="w_sin" /><input name="low" type="float" value="0.3" /><input name="high" type="float" value="1" /></smoothstep>
+    <multiply name="uv_wmask" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="5" /></multiply>
+    <noise2d name="w_mask0" type="float"><input name="texcoord" type="vector2" nodename="uv_wmask" /><input name="amplitude" type="float" value="0.5" /><input name="pivot" type="float" value="0.5" /></noise2d>
+    <multiply name="swirl" type="float"><input name="in1" type="float" nodename="w_ring" /><input name="in2" type="float" nodename="w_mask0" /></multiply>
+
+    <mix name="r_base" type="float"><input name="bg" type="float" value="0.15" /><input name="fg" type="float" value="0.28" /><input name="mix" type="float" nodename="haze" /></mix>
+    <multiply name="r_swirl" type="float"><input name="in1" type="float" nodename="swirl" /><input name="in2" type="float" value="0.06" /></multiply>
+    <multiply name="r_stone" type="float"><input name="in1" type="float" nodename="stone" /><input name="in2" type="float" value="-0.03" /></multiply>
+    <multiply name="r_scr" type="float"><input name="in1" type="float" nodename="scratch" /><input name="in2" type="float" value="0.12" /></multiply>
+    <add name="r_a" type="float"><input name="in1" type="float" nodename="r_base" /><input name="in2" type="float" nodename="r_swirl" /></add>
+    <add name="r_b" type="float"><input name="in1" type="float" nodename="r_a" /><input name="in2" type="float" nodename="r_stone" /></add>
+    <add name="r_c" type="float"><input name="in1" type="float" nodename="r_b" /><input name="in2" type="float" nodename="r_scr" /></add>
+    <mix name="roughness" type="float"><input name="bg" type="float" nodename="r_c" /><input name="fg" type="float" value="0.6" /><input name="mix" type="float" nodename="pore" /></mix>
+
+    <output name="base_color_out" type="color3" nodename="base_color" />
+    <output name="roughness_out" type="float" nodename="roughness" />
+    <output name="normal_out" type="vector3" nodename="n_world" />
+    <output name="metalness_out" type="float" nodename="metalness" />
+  </nodegraph>
+  <standard_surface name="SR_polished_floor" type="surfaceshader">
+    <input name="base" type="float" value="1" />
+    <input name="base_color" type="color3" nodegraph="NG_polished_floor" output="base_color_out" />
+    <input name="specular" type="float" value="0.5" />
+    <input name="specular_IOR" type="float" value="1.5" />
+    <input name="specular_roughness" type="float" nodegraph="NG_polished_floor" output="roughness_out" />
+    <input name="metalness" type="float" nodegraph="NG_polished_floor" output="metalness_out" />
+    <input name="normal" type="vector3" nodegraph="NG_polished_floor" output="normal_out" />
+  </standard_surface>
+  <surfacematerial name="M_polished_floor" type="material"><input name="surfaceshader" type="surfaceshader" nodename="SR_polished_floor" /></surfacematerial>
+</materialx>
