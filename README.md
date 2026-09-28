@@ -1,4 +1,4 @@
-# material-samples
+# mtlx-sample-library
 
 This repository organizes sample MaterialX materials (`.mtlx`) and related textures for reference rendering workflows.
 
