@@ -2,5 +2,11 @@
   "rendererName": "threejs-current",
   "status": "success",
   "error": null,
-  "logs": []
+  "logs": [
+    {
+      "level": "warning",
+      "source": "renderer",
+      "message": "MaterialX warning: ignored-surface-input [surface_shader1]: standard_surface input \"tangent\" is currently ignored in MaterialX translation."
+    }
+  ]
 }

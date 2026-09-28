@@ -12,6 +12,16 @@
       "level": "error",
       "source": "renderer",
       "message": "MaterialX error: unknown-input [surface_shader1]: Node interface error: Input 'ior' doesn't match declaration: <standard_surface name=\"surface_shader1\" type=\"surfaceshader\" nodedef=\"ND_standard_surface_surfaceshader\">"
+    },
+    {
+      "level": "warning",
+      "source": "renderer",
+      "message": "MaterialX warning: ignored-surface-input [surface_shader1]: standard_surface input \"thin_film_ior\" is currently ignored in MaterialX translation."
+    },
+    {
+      "level": "warning",
+      "source": "renderer",
+      "message": "MaterialX warning: ignored-surface-input [surface_shader1]: standard_surface input \"ior\" is currently ignored in MaterialX translation."
     }
   ]
 }

@@ -1,6 +1,36 @@
 {
   "rendererName": "threejs-current",
-  "status": "success",
-  "error": null,
-  "logs": []
+  "status": "failed",
+  "error": {
+    "name": "Error",
+    "message": "Browser console error: THREE.WebGPURenderer: Uncaptured WebGPU GPUValidationError: Error while parsing WGSL: :460:38 error: cannot index type 'abstract-float'\n  DiffuseColor.w = ( DiffuseColor.w * 0.7[ 0u ] );\n                                      ^^^^^^^^^\n\n\n - While calling [Device].CreateShaderModule([ShaderModuleDescriptor \"\"fragment_showcase_opacity_specular_ior\"\"]).\n",
+    "stack": "Error: Browser console error: THREE.WebGPURenderer: Uncaptured WebGPU GPUValidationError: Error while parsing WGSL: :460:38 error: cannot index type 'abstract-float'\n  DiffuseColor.w = ( DiffuseColor.w * 0.7[ 0u ] );\n                                      ^^^^^^^^^\n\n\n - While calling [Device].CreateShaderModule([ShaderModuleDescriptor \"\"fragment_showcase_opacity_specular_ior\"\"]).\n\n    at createRenderError (file:///Users/bhouston/Coding/OpenSource/mtlx-fidelity/packages/renderer-threejs/dist/index.js:104:19)\n    at recordBrowserError (file:///Users/bhouston/Coding/OpenSource/mtlx-fidelity/packages/renderer-threejs/dist/index.js:257:28)\n    at _Page.onConsole (file:///Users/bhouston/Coding/OpenSource/mtlx-fidelity/packages/renderer-threejs/dist/index.js:268:17)\n    at _Page._callHandler (/Users/bhouston/Coding/OpenSource/mtlx-fidelity/node_modules/.pnpm/playwright-core@1.61.1/node_modules/playwright-core/lib/coreBundle.js:10379:33)\n    at _Page.emit (/Users/bhouston/Coding/OpenSource/mtlx-fidelity/node_modules/.pnpm/playwright-core@1.61.1/node_modules/playwright-core/lib/coreBundle.js:10369:16)\n    at Proxy.<anonymous> (/Users/bhouston/Coding/OpenSource/mtlx-fidelity/node_modules/.pnpm/playwright-core@1.61.1/node_modules/playwright-core/lib/coreBundle.js:60603:17)\n    at Proxy._callHandler (/Users/bhouston/Coding/OpenSource/mtlx-fidelity/node_modules/.pnpm/playwright-core@1.61.1/node_modules/playwright-core/lib/coreBundle.js:10379:33)\n    at Proxy.emit (/Users/bhouston/Coding/OpenSource/mtlx-fidelity/node_modules/.pnpm/playwright-core@1.61.1/node_modules/playwright-core/lib/coreBundle.js:10369:16)\n    at Connection.dispatch (/Users/bhouston/Coding/OpenSource/mtlx-fidelity/node_modules/.pnpm/playwright-core@1.61.1/node_modules/playwright-core/lib/coreBundle.js:62251:25)\n    at Immediate.<anonymous> (/Users/bhouston/Coding/OpenSource/mtlx-fidelity/node_modules/.pnpm/playwright-core@1.61.1/node_modules/playwright-core/lib/coreBundle.js:62311:85)"
+  },
+  "logs": [
+    {
+      "level": "error",
+      "source": "browser",
+      "message": "THREE.WebGPURenderer: Uncaptured WebGPU GPUValidationError: Error while parsing WGSL: :460:38 error: cannot index type 'abstract-float'\n  DiffuseColor.w = ( DiffuseColor.w * 0.7[ 0u ] );\n                                      ^^^^^^^^^\n\n\n - While calling [Device].CreateShaderModule([ShaderModuleDescriptor \"\"fragment_showcase_opacity_specular_ior\"\"]).\n"
+    },
+    {
+      "level": "warning",
+      "source": "browser",
+      "message": "Error while parsing WGSL: :460:38 error: cannot index type 'abstract-float'\n  DiffuseColor.w = ( DiffuseColor.w * 0.7[ 0u ] );\n                                      ^^^^^^^^^\n\n\n - While calling [Device].CreateShaderModule([ShaderModuleDescriptor \"\"fragment_showcase_opacity_specular_ior\"\"]).\n"
+    },
+    {
+      "level": "error",
+      "source": "browser",
+      "message": "THREE.WebGPURenderer: Async render pipeline creation failed (renderPipeline_showcase_opacity_specular_ior_18): [Invalid ShaderModule \"fragment_showcase_opacity_specular_ior\"] is invalid due to a previous error.\n - While validating fragment stage ([Invalid ShaderModule \"fragment_showcase_opacity_specular_ior\"], entryPoint: \"main\").\n - While validating fragment state.\n"
+    },
+    {
+      "level": "error",
+      "source": "browser",
+      "message": "THREE.WebGPURenderer [renderPipeline_showcase_opacity_specular_ior_18 / fragment error] at line 460:38: cannot index type 'abstract-float'\n  \tDiffuseColor.w = ( DiffuseColor.w * 0.7[ 0u ] );\n                                       ^"
+    },
+    {
+      "level": "warning",
+      "source": "renderer",
+      "message": "MaterialX warning: ignored-surface-input [surface_shader1]: standard_surface input \"ior\" is currently ignored in MaterialX translation."
+    }
+  ]
 }

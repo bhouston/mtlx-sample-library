@@ -2,5 +2,11 @@
   "rendererName": "threejs-current",
   "status": "success",
   "error": null,
-  "logs": []
+  "logs": [
+    {
+      "level": "warning",
+      "source": "renderer",
+      "message": "MaterialX warning: ignored-surface-input [SR_standard_surface_sweep_thin_film_thickness_0_25]: standard_surface input \"thin_film_ior\" is currently ignored in MaterialX translation."
+    }
+  ]
 }

@@ -2,5 +2,16 @@
   "rendererName": "threejs-new",
   "status": "success",
   "error": null,
-  "logs": []
+  "logs": [
+    {
+      "level": "error",
+      "source": "renderer",
+      "message": "MaterialX error: invalid-value [ior_luma]: Missing input \"lumacoeffs\" for node \"ior_luma\" (luminance) and no nodedef default. Using fallback 0."
+    },
+    {
+      "level": "error",
+      "source": "renderer",
+      "message": "MaterialX error: invalid-value [ext_luma]: Missing input \"lumacoeffs\" for node \"ext_luma\" (luminance) and no nodedef default. Using fallback 0."
+    }
+  ]
 }

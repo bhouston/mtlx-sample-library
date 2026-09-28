@@ -2,5 +2,16 @@
   "rendererName": "threejs-current",
   "status": "success",
   "error": null,
-  "logs": []
+  "logs": [
+    {
+      "level": "warning",
+      "source": "renderer",
+      "message": "MaterialX warning: ignored-surface-input [open_pbr_surface_surfaceshader]: open_pbr_surface input \"transmission_scatter\" is currently ignored in MaterialX translation."
+    },
+    {
+      "level": "warning",
+      "source": "renderer",
+      "message": "MaterialX warning: ignored-surface-input [open_pbr_surface_surfaceshader]: open_pbr_surface input \"transmission_scatter_anisotropy\" is currently ignored in MaterialX translation."
+    }
+  ]
 }

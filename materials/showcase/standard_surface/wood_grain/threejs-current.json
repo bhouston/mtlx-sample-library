@@ -2,5 +2,11 @@
   "rendererName": "threejs-current",
   "status": "success",
   "error": null,
-  "logs": []
+  "logs": [
+    {
+      "level": "warning",
+      "source": "renderer",
+      "message": "MaterialX warning: ignored-surface-input [SR_wood1]: standard_surface input \"coat_anisotropy\" is currently ignored in MaterialX translation."
+    }
+  ]
 }
