@@ -1,5 +1,9 @@
 # mtlx-sample-library
 
+[![Discord](https://img.shields.io/badge/Discord-join%20the%20community-5865F2?logo=discord&logoColor=white)](https://discord.gg/wzQWaBBxup)
+
+Part of the [mtlx suite of tools](https://mtlx.ai) ([GitHub](https://github.com/bhouston/mtlx)).
+
 This repository organizes sample MaterialX materials (`.mtlx`) and related textures for reference rendering workflows.
 
 ## Purpose
