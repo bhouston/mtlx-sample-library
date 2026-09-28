@@ -1,0 +1,126 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!-- Acid-etched white precast concrete (white cement + fine light sand). Texcoords are meters: UV 0..1 = 1 m. -->
+  <nodegraph name="NG_white_precast">
+    <texcoord name="uv" type="vector2" />
+
+    <!-- Soft clouding, ~35 cm blotches. fractal2d is signed (-1..1): remap to 0..1. -->
+    <multiply name="uv_cloud" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="3" /></multiply>
+    <fractal2d name="cloud_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_cloud" /><input name="octaves" type="integer" value="5" /><input name="diminish" type="float" value="0.5" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <add name="cloud" type="float"><input name="in1" type="float" nodename="cloud_raw" /><input name="in2" type="float" value="0.5" /></add>
+
+    <!-- Mid paste variation, ~4 cm (signed). -->
+    <multiply name="uv_mid" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="25" /></multiply>
+    <fractal2d name="mid" type="float"><input name="texcoord" type="vector2" nodename="uv_mid" /><input name="octaves" type="integer" value="3" /></fractal2d>
+
+    <!-- Exposed sand grains from acid etching: two worley grain layers, 0.6 mm (1600/m) and 1.1 mm (900/m).
+         Flat-topped grains with a steep edge into recessed paste; a grain-scale noise varies relief per grain. -->
+    <multiply name="uv_sand" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="1600" /></multiply>
+    <worleynoise2d name="sand_f1" type="float"><input name="texcoord" type="vector2" nodename="uv_sand" /><input name="jitter" type="float" value="0.9" /></worleynoise2d>
+    <smoothstep name="sand_edge" type="float"><input name="in" type="float" nodename="sand_f1" /><input name="low" type="float" value="0.25" /><input name="high" type="float" value="0.5" /></smoothstep>
+    <subtract name="sand_s" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="sand_edge" /></subtract>
+    <multiply name="uv_coarse" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="900" /></multiply>
+    <add name="uv_coarse_o" type="vector2"><input name="in1" type="vector2" nodename="uv_coarse" /><input name="in2" type="vector2" value="17.3, 41.9" /></add>
+    <worleynoise2d name="coarse_f1" type="float"><input name="texcoord" type="vector2" nodename="uv_coarse_o" /><input name="jitter" type="float" value="0.9" /></worleynoise2d>
+    <smoothstep name="coarse_edge" type="float"><input name="in" type="float" nodename="coarse_f1" /><input name="low" type="float" value="0.2" /><input name="high" type="float" value="0.42" /></smoothstep>
+    <subtract name="coarse_s" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="coarse_edge" /></subtract>
+    <!-- Grain-scale amplitude noise (0.3..1), so neighbouring grains stand proud by different amounts. -->
+    <multiply name="uv_gamp" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="1100" /></multiply>
+    <noise2d name="gamp" type="float"><input name="texcoord" type="vector2" nodename="uv_gamp" /><input name="amplitude" type="float" value="0.7" /><input name="pivot" type="float" value="0.65" /></noise2d>
+    <max name="sand_u" type="float"><input name="in1" type="float" nodename="sand_s" /><input name="in2" type="float" nodename="coarse_s" /></max>
+    <multiply name="sand" type="float"><input name="in1" type="float" nodename="sand_u" /><input name="in2" type="float" nodename="gamp" /></multiply>
+
+    <!-- Sparse coarse sand grains 0.5-1.5 mm (max radius kept under ~0.25 cell so none is clipped): worley on a 3.3 mm grid (300/m), noise-driven radius (negative = none). -->
+    <multiply name="uv_big" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="300" /></multiply>
+    <add name="uv_big_o" type="vector2"><input name="in1" type="vector2" nodename="uv_big" /><input name="in2" type="vector2" value="5.7, 93.1" /></add>
+    <worleynoise2d name="big_dist" type="float"><input name="texcoord" type="vector2" nodename="uv_big_o" /></worleynoise2d>
+    <multiply name="uv_bsize" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="230" /></multiply>
+    <noise2d name="bsize_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_bsize" /></noise2d>
+    <multiply name="bsize_s" type="float"><input name="in1" type="float" nodename="bsize_raw" /><input name="in2" type="float" value="0.6" /></multiply>
+    <subtract name="big_r" type="float"><input name="in1" type="float" nodename="bsize_s" /><input name="in2" type="float" value="0.08" /></subtract>
+    <subtract name="big_d" type="float"><input name="in1" type="float" nodename="big_r" /><input name="in2" type="float" nodename="big_dist" /></subtract>
+    <smoothstep name="big" type="float"><input name="in" type="float" nodename="big_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.04" /></smoothstep>
+    <!-- Per-grain hue for coarse grains: smooth noise picks translucent grey quartz vs pale beige feldspar. -->
+    <multiply name="uv_bhue" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="190" /></multiply>
+    <noise2d name="bhue" type="float"><input name="texcoord" type="vector2" nodename="uv_bhue" /><input name="amplitude" type="float" value="0.5" /><input name="pivot" type="float" value="0.5" /></noise2d>
+    <mix name="big_col" type="color3"><input name="bg" type="color3" value="0.5, 0.495, 0.48" /><input name="fg" type="color3" value="0.62, 0.56, 0.48" /><input name="mix" type="float" nodename="bhue" /></mix>
+
+    <!-- Fine etch tooth in the paste, ~0.3 mm (signed). -->
+    <multiply name="uv_tooth" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="3000" /></multiply>
+    <fractal2d name="tooth" type="float"><input name="texcoord" type="vector2" nodename="uv_tooth" /><input name="octaves" type="integer" value="2" /></fractal2d>
+
+    <!-- Pinholes 0.5-2 mm: worley on a 2.5 cm grid (40/m); a smooth noise field sets each radius (negative = none). -->
+    <multiply name="uv_pin" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="40" /></multiply>
+    <worleynoise2d name="pin_dist" type="float"><input name="texcoord" type="vector2" nodename="uv_pin" /></worleynoise2d>
+    <multiply name="uv_psize" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="53" /></multiply>
+    <noise2d name="psize_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_psize" /></noise2d>
+    <multiply name="psize_s" type="float"><input name="in1" type="float" nodename="psize_raw" /><input name="in2" type="float" value="0.14" /></multiply>
+    <subtract name="pin_r" type="float"><input name="in1" type="float" nodename="psize_s" /><input name="in2" type="float" value="0.035" /></subtract>
+    <subtract name="pin_d" type="float"><input name="in1" type="float" nodename="pin_r" /><input name="in2" type="float" nodename="pin_dist" /></subtract>
+    <smoothstep name="pin" type="float"><input name="in" type="float" nodename="pin_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.008" /></smoothstep>
+
+    <!-- Occasional dark sand grains ~0.3-0.6 mm: worley on a 5 mm grid (200/m), noise-driven radius. -->
+    <multiply name="uv_dk" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="200" /></multiply>
+    <worleynoise2d name="dk_dist" type="float"><input name="texcoord" type="vector2" nodename="uv_dk" /></worleynoise2d>
+    <multiply name="uv_dsize" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="170" /></multiply>
+    <noise2d name="dsize_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_dsize" /></noise2d>
+    <multiply name="dsize_s" type="float"><input name="in1" type="float" nodename="dsize_raw" /><input name="in2" type="float" value="0.2" /></multiply>
+    <subtract name="dk_r" type="float"><input name="in1" type="float" nodename="dsize_s" /><input name="in2" type="float" value="0.08" /></subtract>
+    <subtract name="dk_d" type="float"><input name="in1" type="float" nodename="dk_r" /><input name="in2" type="float" nodename="dk_dist" /></subtract>
+    <smoothstep name="dark" type="float"><input name="in" type="float" nodename="dk_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.03" /></smoothstep>
+
+    <!-- Height in meters: 0.4 mm clouding undulation, 0.06 mm proud sand grains, 0.02 mm tooth, 1 mm deep pinholes. -->
+    <multiply name="h_cloud" type="float"><input name="in1" type="float" nodename="cloud" /><input name="in2" type="float" value="0.0004" /></multiply>
+    <multiply name="h_sand" type="float"><input name="in1" type="float" nodename="sand" /><input name="in2" type="float" value="0.000045" /></multiply>
+    <multiply name="h_tooth" type="float"><input name="in1" type="float" nodename="tooth" /><input name="in2" type="float" value="0.00002" /></multiply>
+    <multiply name="h_pin" type="float"><input name="in1" type="float" nodename="pin" /><input name="in2" type="float" value="-0.001" /></multiply>
+    <add name="h_a" type="float"><input name="in1" type="float" nodename="h_cloud" /><input name="in2" type="float" nodename="h_sand" /></add>
+    <add name="h_b" type="float"><input name="in1" type="float" nodename="h_a" /><input name="in2" type="float" nodename="h_tooth" /></add>
+    <multiply name="h_big" type="float"><input name="in1" type="float" nodename="big" /><input name="in2" type="float" value="0.00005" /></multiply>
+    <add name="h_c" type="float"><input name="in1" type="float" nodename="h_b" /><input name="in2" type="float" nodename="h_big" /></add>
+    <add name="height" type="float"><input name="in1" type="float" nodename="h_c" /><input name="in2" type="float" nodename="h_pin" /></add>
+    <!-- heighttonormal millimeter workaround: height and texcoord both x1000; scale 16 cancels the 1/16 Sobel factor. -->
+    <multiply name="uv_mm" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="1000" /></multiply>
+    <multiply name="height_mm" type="float"><input name="in1" type="float" nodename="height" /><input name="in2" type="float" value="1000" /></multiply>
+    <heighttonormal name="n_tangent" type="vector3"><input name="in" type="float" nodename="height_mm" /><input name="scale" type="float" value="16" /><input name="texcoord" type="vector2" nodename="uv_mm" /></heighttonormal>
+    <normalmap name="n_world" type="vector3"><input name="in" type="vector3" nodename="n_tangent" /></normalmap>
+
+    <!-- Color: warm white ~0.57..0.66, low-contrast clouding, faint sand speckle, dark grains and pinholes. -->
+    <mix name="col_cloud" type="color3"><input name="bg" type="color3" value="0.6, 0.572, 0.54" /><input name="fg" type="color3" value="0.69, 0.662, 0.63" /><input name="mix" type="float" nodename="cloud" /></mix>
+    <multiply name="mid_tint" type="float"><input name="in1" type="float" nodename="mid" /><input name="in2" type="float" value="0.03" /></multiply>
+    <multiply name="uv_gcol" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="1250" /></multiply>
+    <noise2d name="gcol" type="float"><input name="texcoord" type="vector2" nodename="uv_gcol" /><input name="amplitude" type="float" value="0.14" /><input name="pivot" type="float" value="0.03" /></noise2d>
+    <multiply name="sand_tint" type="float"><input name="in1" type="float" nodename="sand_u" /><input name="in2" type="float" nodename="gcol" /></multiply>
+    <add name="tints" type="float"><input name="in1" type="float" nodename="mid_tint" /><input name="in2" type="float" nodename="sand_tint" /></add>
+    <add name="tint_factor" type="float"><input name="in1" type="float" nodename="tints" /><input name="in2" type="float" value="0.975" /></add>
+    <multiply name="col_tint" type="color3"><input name="in1" type="color3" nodename="col_cloud" /><input name="in2" type="float" nodename="tint_factor" /></multiply>
+    <multiply name="big_mix" type="float"><input name="in1" type="float" nodename="big" /><input name="in2" type="float" value="0.85" /></multiply>
+    <mix name="col_big" type="color3"><input name="bg" type="color3" nodename="col_tint" /><input name="fg" type="color3" nodename="big_col" /><input name="mix" type="float" nodename="big_mix" /></mix>
+    <mix name="col_dark" type="color3"><input name="bg" type="color3" nodename="col_big" /><input name="fg" type="color3" value="0.3, 0.27, 0.235" /><input name="mix" type="float" nodename="dark" /></mix>
+    <mix name="base_color" type="color3"><input name="bg" type="color3" nodename="col_dark" /><input name="fg" type="color3" value="0.4, 0.39, 0.37" /><input name="mix" type="float" nodename="pin" /></mix>
+
+    <!-- Dielectric throughout. -->
+    <constant name="metalness" type="float"><input name="value" type="float" value="0" /></constant>
+
+    <!-- Roughness 0.74..0.82; sand grain tops slightly smoother (glassy quartz), pinholes rougher. -->
+    <mix name="rough_cloud" type="float"><input name="bg" type="float" value="0.82" /><input name="fg" type="float" value="0.77" /><input name="mix" type="float" nodename="cloud" /></mix>
+    <multiply name="rough_sand" type="float"><input name="in1" type="float" nodename="sand" /><input name="in2" type="float" value="-0.04" /></multiply>
+    <add name="rough_a" type="float"><input name="in1" type="float" nodename="rough_cloud" /><input name="in2" type="float" nodename="rough_sand" /></add>
+    <mix name="roughness" type="float"><input name="bg" type="float" nodename="rough_a" /><input name="fg" type="float" value="0.92" /><input name="mix" type="float" nodename="pin" /></mix>
+
+    <output name="base_color_out" type="color3" nodename="base_color" />
+    <output name="roughness_out" type="float" nodename="roughness" />
+    <output name="normal_out" type="vector3" nodename="n_world" />
+    <output name="metalness_out" type="float" nodename="metalness" />
+  </nodegraph>
+  <standard_surface name="SR_white_precast" type="surfaceshader">
+    <input name="base" type="float" value="1" />
+    <input name="base_color" type="color3" nodegraph="NG_white_precast" output="base_color_out" />
+    <input name="specular" type="float" value="0.5" />
+    <input name="specular_IOR" type="float" value="1.5" />
+    <input name="specular_roughness" type="float" nodegraph="NG_white_precast" output="roughness_out" />
+    <input name="metalness" type="float" nodegraph="NG_white_precast" output="metalness_out" />
+    <input name="normal" type="vector3" nodegraph="NG_white_precast" output="normal_out" />
+  </standard_surface>
+  <surfacematerial name="M_white_precast" type="material"><input name="surfaceshader" type="surfaceshader" nodename="SR_white_precast" /></surfacematerial>
+</materialx>

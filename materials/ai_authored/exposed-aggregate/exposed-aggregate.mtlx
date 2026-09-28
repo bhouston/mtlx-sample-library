@@ -1,0 +1,153 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!-- Exposed-aggregate concrete paving. Texcoords are meters: UV 0..1 = 1 m. -->
+  <nodegraph name="NG_exposed_aggregate">
+    <texcoord name="uv" type="vector2" />
+
+    <!-- Stone cells: 72 per meter (~14 mm; stones 6-14 mm after the gap and rounding). Domain-warped in cell units so stones are irregular, not a grid. -->
+    <multiply name="s_uv" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="72" /></multiply>
+    <multiply name="s_warp_uv" type="vector2"><input name="in1" type="vector2" nodename="s_uv" /><input name="in2" type="float" value="0.6" /></multiply>
+    <noise2d name="s_warp" type="vector2"><input name="texcoord" type="vector2" nodename="s_warp_uv" /><input name="amplitude" type="float" value="0.2" /></noise2d>
+    <add name="s_w" type="vector2"><input name="in1" type="vector2" nodename="s_uv" /><input name="in2" type="vector2" nodename="s_warp" /></add>
+
+    <!-- (F1, F2, F3) distances, and a per-stone random vec3 (style 1 = cell value at the nearest feature point). -->
+    <worleynoise2d name="wf" type="vector3"><input name="texcoord" type="vector2" nodename="s_w" /><input name="jitter" type="float" value="1" /></worleynoise2d>
+    <worleynoise2d name="wid" type="vector3"><input name="texcoord" type="vector2" nodename="s_w" /><input name="jitter" type="float" value="1" /><input name="style" type="integer" value="1" /></worleynoise2d>
+    <extract name="f1" type="float"><input name="in" type="vector3" nodename="wf" /><input name="index" type="integer" value="0" /></extract>
+    <extract name="f2" type="float"><input name="in" type="vector3" nodename="wf" /><input name="index" type="integer" value="1" /></extract>
+    <extract name="id_x" type="float"><input name="in" type="vector3" nodename="wid" /><input name="index" type="integer" value="0" /></extract>
+    <extract name="id_y" type="float"><input name="in" type="vector3" nodename="wid" /><input name="index" type="integer" value="1" /></extract>
+    <extract name="id_z" type="float"><input name="in" type="vector3" nodename="wid" /><input name="index" type="integer" value="2" /></extract>
+
+    <!-- Signed distance inside the stone (cell units): min of Voronoi-edge inset (packing gap) and a per-stone circle radius (rounding, size). -->
+    <subtract name="e" type="float"><input name="in1" type="float" nodename="f2" /><input name="in2" type="float" nodename="f1" /></subtract>
+    <subtract name="e_gap" type="float"><input name="in1" type="float" nodename="e" /><input name="in2" type="float" value="0.06" /></subtract>
+    <multiply name="d_edge" type="float"><input name="in1" type="float" nodename="e_gap" /><input name="in2" type="float" value="0.5" /></multiply>
+    <multiply name="rad_v" type="float"><input name="in1" type="float" nodename="id_z" /><input name="in2" type="float" value="0.3" /></multiply>
+    <add name="rad" type="float"><input name="in1" type="float" nodename="rad_v" /><input name="in2" type="float" value="0.5" /></add>
+    <subtract name="d_circ" type="float"><input name="in1" type="float" nodename="rad" /><input name="in2" type="float" nodename="f1" /></subtract>
+    <!-- Smooth min (k = 0.4 cells) rounds the Voronoi corners into pebble outlines. -->
+    <subtract name="sm_ba" type="float"><input name="in1" type="float" nodename="d_circ" /><input name="in2" type="float" nodename="d_edge" /></subtract>
+    <multiply name="sm_q" type="float"><input name="in1" type="float" nodename="sm_ba" /><input name="in2" type="float" value="1.25" /></multiply>
+    <add name="sm_q2" type="float"><input name="in1" type="float" nodename="sm_q" /><input name="in2" type="float" value="0.5" /></add>
+    <clamp name="sm_h" type="float"><input name="in" type="float" nodename="sm_q2" /><input name="low" type="float" value="0" /><input name="high" type="float" value="1" /></clamp>
+    <mix name="sm_mix" type="float"><input name="bg" type="float" nodename="d_circ" /><input name="fg" type="float" nodename="d_edge" /><input name="mix" type="float" nodename="sm_h" /></mix>
+    <subtract name="sm_h1" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="sm_h" /></subtract>
+    <multiply name="sm_hh" type="float"><input name="in1" type="float" nodename="sm_h" /><input name="in2" type="float" nodename="sm_h1" /></multiply>
+    <multiply name="sm_corr" type="float"><input name="in1" type="float" nodename="sm_hh" /><input name="in2" type="float" value="0.4" /></multiply>
+    <subtract name="d_in" type="float"><input name="in1" type="float" nodename="sm_mix" /><input name="in2" type="float" nodename="sm_corr" /></subtract>
+
+    <!-- Dome profile over ~0.3 cells (~3 mm) from the stone edge. -->
+    <divide name="t_raw" type="float"><input name="in1" type="float" nodename="d_in" /><input name="in2" type="float" value="0.3" /></divide>
+    <clamp name="t" type="float"><input name="in" type="float" nodename="t_raw" /><input name="low" type="float" value="0" /><input name="high" type="float" value="1" /></clamp>
+    <subtract name="t_inv" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="t" /></subtract>
+    <multiply name="t_inv2" type="float"><input name="in1" type="float" nodename="t_inv" /><input name="in2" type="float" nodename="t_inv" /></multiply>
+    <subtract name="dome" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="t_inv2" /></subtract>
+    <smoothstep name="stone" type="float"><input name="in" type="float" nodename="d_in" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.02" /></smoothstep>
+
+    <!-- Per-stone protrusion 1.2..2.8 mm. -->
+    <multiply name="hs_v" type="float"><input name="in1" type="float" nodename="id_y" /><input name="in2" type="float" value="0.0016" /></multiply>
+    <add name="hs" type="float"><input name="in1" type="float" nodename="hs_v" /><input name="in2" type="float" value="0.0012" /></add>
+    <!-- Crown: a smooth cap around the stone centre (1 - 0.6 (F1/0.7)^2) so tops are domed, not flat, and medial-axis creases fade. -->
+    <multiply name="cr_q" type="float"><input name="in1" type="float" nodename="f1" /><input name="in2" type="float" value="1.4286" /></multiply>
+    <multiply name="cr_q2" type="float"><input name="in1" type="float" nodename="cr_q" /><input name="in2" type="float" nodename="cr_q" /></multiply>
+    <multiply name="cr_s" type="float"><input name="in1" type="float" nodename="cr_q2" /><input name="in2" type="float" value="0.6" /></multiply>
+    <subtract name="crown" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="cr_s" /></subtract>
+    <multiply name="dome_c" type="float"><input name="in1" type="float" nodename="dome" /><input name="in2" type="float" nodename="crown" /></multiply>
+    <multiply name="h_stone" type="float"><input name="in1" type="float" nodename="dome_c" /><input name="in2" type="float" nodename="hs" /></multiply>
+
+    <!-- Fine sand grain in the matrix, ~1 mm; 0.15 mm relief. -->
+    <multiply name="uv_sand" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="900" /></multiply>
+    <fractal2d name="sand" type="float"><input name="texcoord" type="vector2" nodename="uv_sand" /><input name="octaves" type="integer" value="3" /></fractal2d>
+    <multiply name="h_sand" type="float"><input name="in1" type="float" nodename="sand" /><input name="in2" type="float" value="0.00008" /></multiply>
+    <subtract name="matrix" type="float"><input name="in1" type="float" value="1" /><input name="in2" type="float" nodename="stone" /></subtract>
+    <multiply name="h_sand_m" type="float"><input name="in1" type="float" nodename="h_sand" /><input name="in2" type="float" nodename="matrix" /></multiply>
+
+    <!-- Stone surface micro-texture, ~2 mm, 0.05 mm. -->
+    <multiply name="uv_micro" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="500" /></multiply>
+    <fractal2d name="micro" type="float"><input name="texcoord" type="vector2" nodename="uv_micro" /><input name="octaves" type="integer" value="3" /></fractal2d>
+    <multiply name="h_micro" type="float"><input name="in1" type="float" nodename="micro" /><input name="in2" type="float" value="0.00005" /></multiply>
+
+    <!-- Height in meters. -->
+    <add name="h_a" type="float"><input name="in1" type="float" nodename="h_stone" /><input name="in2" type="float" nodename="h_sand_m" /></add>
+    <add name="height" type="float"><input name="in1" type="float" nodename="h_a" /><input name="in2" type="float" nodename="h_micro" /></add>
+    <!-- three.js heighttonormal needs millimeters (see AUTHORING.md); scale 16 cancels the 1/16 Sobel factor. -->
+    <multiply name="uv_mm" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="1000" /></multiply>
+    <multiply name="height_mm" type="float"><input name="in1" type="float" nodename="height" /><input name="in2" type="float" value="1000" /></multiply>
+    <heighttonormal name="n_tangent" type="vector3"><input name="in" type="float" nodename="height_mm" /><input name="scale" type="float" value="16" /><input name="texcoord" type="vector2" nodename="uv_mm" /></heighttonormal>
+    <normalmap name="n_world" type="vector3"><input name="in" type="vector3" nodename="n_tangent" /></normalmap>
+
+    <!-- Large-scale tone, ~30 cm. -->
+    <multiply name="uv_tone" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="3" /></multiply>
+    <fractal2d name="tone_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_tone" /><input name="octaves" type="integer" value="4" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <add name="tone" type="float"><input name="in1" type="float" nodename="tone_raw" /><input name="in2" type="float" value="0.5" /></add>
+
+    <!-- Stone palette by per-stone id: near-black, grey, rust-brown, tan, cream, white quartz. -->
+    <ifgreater name="pal_a" type="color3"><input name="value1" type="float" nodename="id_x" /><input name="value2" type="float" value="0.95" /><input name="in1" type="color3" value="0.72, 0.71, 0.67" /><input name="in2" type="color3" value="0.58, 0.52, 0.42" /></ifgreater>
+    <ifgreater name="pal_b" type="color3"><input name="value1" type="float" nodename="id_x" /><input name="value2" type="float" value="0.72" /><input name="in1" type="color3" nodename="pal_a" /><input name="in2" type="color3" value="0.40, 0.33, 0.24" /></ifgreater>
+    <ifgreater name="pal_c" type="color3"><input name="value1" type="float" nodename="id_x" /><input name="value2" type="float" value="0.48" /><input name="in1" type="color3" nodename="pal_b" /><input name="in2" type="color3" value="0.27, 0.165, 0.105" /></ifgreater>
+    <ifgreater name="pal_d" type="color3"><input name="value1" type="float" nodename="id_x" /><input name="value2" type="float" value="0.34" /><input name="in1" type="color3" nodename="pal_c" /><input name="in2" type="color3" value="0.27, 0.27, 0.26" /></ifgreater>
+    <ifgreater name="pal" type="color3"><input name="value1" type="float" nodename="id_x" /><input name="value2" type="float" value="0.14" /><input name="in1" type="color3" nodename="pal_d" /><input name="in2" type="color3" value="0.05, 0.05, 0.05" /></ifgreater>
+    <!-- Per-stone brightness 0.75..1.2 and in-stone mottling. -->
+    <multiply name="sb_v" type="float"><input name="in1" type="float" nodename="id_y" /><input name="in2" type="float" value="0.45" /></multiply>
+    <add name="sb" type="float"><input name="in1" type="float" nodename="sb_v" /><input name="in2" type="float" value="0.75" /></add>
+    <multiply name="mic_t" type="float"><input name="in1" type="float" nodename="micro" /><input name="in2" type="float" value="0.25" /></multiply>
+    <add name="sb_m" type="float"><input name="in1" type="float" nodename="sb" /><input name="in2" type="float" nodename="mic_t" /></add>
+    <multiply name="col_stone0" type="color3"><input name="in1" type="color3" nodename="pal" /><input name="in2" type="float" nodename="sb_m" /></multiply>
+    <!-- In-stone mottling, ~7 mm, offset per stone so each pebble differs; tints channels independently. -->
+    <convert name="id_xy" type="vector2"><input name="in" type="vector3" nodename="wid" /></convert>
+    <multiply name="id_shift" type="vector2"><input name="in1" type="vector2" nodename="id_xy" /><input name="in2" type="float" value="37" /></multiply>
+    <multiply name="uv_mot" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="150" /></multiply>
+    <add name="uv_mot_s" type="vector2"><input name="in1" type="vector2" nodename="uv_mot" /><input name="in2" type="vector2" nodename="id_shift" /></add>
+    <fractal2d name="mot" type="float"><input name="texcoord" type="vector2" nodename="uv_mot_s" /><input name="octaves" type="integer" value="3" /></fractal2d>
+    <multiply name="mot_c" type="color3"><input name="in1" type="color3" value="0.3, 0.27, 0.23" /><input name="in2" type="float" nodename="mot" /></multiply>
+    <add name="mot_f" type="color3"><input name="in1" type="color3" nodename="mot_c" /><input name="in2" type="float" value="1" /></add>
+    <multiply name="col_stone" type="color3"><input name="in1" type="color3" nodename="col_stone0" /><input name="in2" type="color3" nodename="mot_f" /></multiply>
+
+    <!-- Matrix: grey cement with sand speckle, darker in the crevices next to stones. -->
+    <multiply name="sand_t" type="float"><input name="in1" type="float" nodename="sand" /><input name="in2" type="float" value="0.2" /></multiply>
+    <add name="sand_f" type="float"><input name="in1" type="float" nodename="sand_t" /><input name="in2" type="float" value="1" /></add>
+    <multiply name="col_matrix_s" type="color3"><input name="in1" type="color3" value="0.33, 0.32, 0.30" /><input name="in2" type="float" nodename="sand_f" /></multiply>
+    <!-- Individual sand grains, ~1.2 mm, each a random light or dark tint. -->
+    <multiply name="uv_grit" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="800" /></multiply>
+    <worleynoise2d name="grit_id" type="vector3"><input name="texcoord" type="vector2" nodename="uv_grit" /><input name="jitter" type="float" value="1" /><input name="style" type="integer" value="1" /></worleynoise2d>
+    <extract name="grit_v" type="float"><input name="in" type="vector3" nodename="grit_id" /><input name="index" type="integer" value="0" /></extract>
+    <multiply name="grit_col" type="color3"><input name="in1" type="color3" value="0.6, 0.57, 0.52" /><input name="in2" type="float" nodename="grit_v" /></multiply>
+    <mix name="col_matrix0" type="color3"><input name="bg" type="color3" nodename="col_matrix_s" /><input name="fg" type="color3" nodename="grit_col" /><input name="mix" type="float" value="0.3" /></mix>
+    <smoothstep name="crev" type="float"><input name="in" type="float" nodename="d_in" /><input name="low" type="float" value="-0.05" /><input name="high" type="float" value="0" /></smoothstep>
+    <mix name="col_matrix" type="color3"><input name="bg" type="color3" nodename="col_matrix0" /><input name="fg" type="color3" value="0.22, 0.215, 0.205" /><input name="mix" type="float" nodename="crev" /></mix>
+
+    <!-- Cement haze on the lower flanks of each stone (paste residue left by the wash-off). -->
+    <multiply name="haze_a" type="float"><input name="in1" type="float" nodename="t_inv2" /><input name="in2" type="float" value="0.2" /></multiply>
+    <mix name="col_stone_h" type="color3"><input name="bg" type="color3" nodename="col_stone" /><input name="fg" type="color3" nodename="col_matrix0" /><input name="mix" type="float" nodename="haze_a" /></mix>
+    <mix name="col_mix" type="color3"><input name="bg" type="color3" nodename="col_matrix" /><input name="fg" type="color3" nodename="col_stone_h" /><input name="mix" type="float" nodename="stone" /></mix>
+    <multiply name="tone_s" type="float"><input name="in1" type="float" nodename="tone" /><input name="in2" type="float" value="0.5" /></multiply>
+    <add name="tone_f" type="float"><input name="in1" type="float" nodename="tone_s" /><input name="in2" type="float" value="0.76" /></add>
+    <multiply name="base_color" type="color3"><input name="in1" type="color3" nodename="col_mix" /><input name="in2" type="float" nodename="tone_f" /></multiply>
+
+    <!-- Dielectric throughout. -->
+    <constant name="metalness" type="float"><input name="value" type="float" value="0" /></constant>
+
+    <!-- Roughness: matrix 0.9, stones 0.45..0.65, glossiest on dome tops. -->
+    <multiply name="rs_v" type="float"><input name="in1" type="float" nodename="id_z" /><input name="in2" type="float" value="0.15" /></multiply>
+    <add name="rs0" type="float"><input name="in1" type="float" nodename="rs_v" /><input name="in2" type="float" value="0.55" /></add>
+    <multiply name="rs_dome" type="float"><input name="in1" type="float" nodename="dome" /><input name="in2" type="float" value="0.15" /></multiply>
+    <subtract name="rs" type="float"><input name="in1" type="float" nodename="rs0" /><input name="in2" type="float" nodename="rs_dome" /></subtract>
+    <mix name="roughness" type="float"><input name="bg" type="float" value="0.9" /><input name="fg" type="float" nodename="rs" /><input name="mix" type="float" nodename="stone" /></mix>
+
+    <output name="base_color_out" type="color3" nodename="base_color" />
+    <output name="roughness_out" type="float" nodename="roughness" />
+    <output name="normal_out" type="vector3" nodename="n_world" />
+    <output name="metalness_out" type="float" nodename="metalness" />
+  </nodegraph>
+  <standard_surface name="SR_exposed_aggregate" type="surfaceshader">
+    <input name="base" type="float" value="1" />
+    <input name="base_color" type="color3" nodegraph="NG_exposed_aggregate" output="base_color_out" />
+    <input name="specular" type="float" value="0.5" />
+    <input name="specular_IOR" type="float" value="1.5" />
+    <input name="specular_roughness" type="float" nodegraph="NG_exposed_aggregate" output="roughness_out" />
+    <input name="metalness" type="float" nodegraph="NG_exposed_aggregate" output="metalness_out" />
+    <input name="normal" type="vector3" nodegraph="NG_exposed_aggregate" output="normal_out" />
+  </standard_surface>
+  <surfacematerial name="M_exposed_aggregate" type="material"><input name="surfaceshader" type="surfaceshader" nodename="SR_exposed_aggregate" /></surfacematerial>
+</materialx>

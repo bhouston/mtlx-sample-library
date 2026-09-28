@@ -1,0 +1,179 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!-- Old weathered exterior concrete wall. Texcoords are meters: UV 0..1 = 1 m. V is up; water runs down -V. -->
+  <nodegraph name="NG_weathered">
+    <texcoord name="uv" type="vector2" />
+
+    <!-- Broad staining, ~25 cm blotches and ~70 cm patches. fractal2d is signed: remap to 0..1. -->
+    <multiply name="uv_mottle" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="4" /></multiply>
+    <fractal2d name="mottle_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_mottle" /><input name="octaves" type="integer" value="5" /><input name="diminish" type="float" value="0.55" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <multiply name="uv_broad" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="1.4" /></multiply>
+    <noise2d name="broad" type="float"><input name="texcoord" type="vector2" nodename="uv_broad" /><input name="amplitude" type="float" value="0.3" /></noise2d>
+    <add name="mottle_b" type="float"><input name="in1" type="float" nodename="mottle_raw" /><input name="in2" type="float" nodename="broad" /></add>
+    <add name="mottle_c" type="float"><input name="in1" type="float" nodename="mottle_b" /><input name="in2" type="float" value="0.5" /></add>
+    <clamp name="mottle" type="float"><input name="in" type="float" nodename="mottle_c" /><input name="low" type="float" value="0" /><input name="high" type="float" value="1" /></clamp>
+
+    <!-- Water streaks: noise stretched along V (~1.5 cm across, ~60 cm long), with the U coordinate wavering every ~15 cm. -->
+    <multiply name="uv_wav" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="vector2" value="3, 7" /></multiply>
+    <noise2d name="wav" type="vector2"><input name="texcoord" type="vector2" nodename="uv_wav" /><input name="amplitude" type="vector2" value="0.012, 0" /></noise2d>
+    <add name="uv_warped" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="vector2" nodename="wav" /></add>
+    <multiply name="uv_streak" type="vector2"><input name="in1" type="vector2" nodename="uv_warped" /><input name="in2" type="vector2" value="70, 0.9" /></multiply>
+    <fractal2d name="streak_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_streak" /><input name="octaves" type="integer" value="3" /></fractal2d>
+    <smoothstep name="streak_thin" type="float"><input name="in" type="float" nodename="streak_raw" /><input name="low" type="float" value="0.12" /><input name="high" type="float" value="0.4" /></smoothstep>
+    <!-- Broad soft wash streaks, ~5 cm across. -->
+    <multiply name="uv_wash" type="vector2"><input name="in1" type="vector2" nodename="uv_warped" /><input name="in2" type="vector2" value="18, 1.1" /></multiply>
+    <fractal2d name="wash_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_wash" /><input name="octaves" type="integer" value="3" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <add name="wash" type="float"><input name="in1" type="float" nodename="wash_raw" /><input name="in2" type="float" value="0.5" /></add>
+    <!-- Intensity per streak group, varies across U every ~12 cm. -->
+    <multiply name="uv_sint" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="vector2" value="9, 1.4" /></multiply>
+    <noise2d name="sint_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_sint" /><input name="amplitude" type="float" value="0.5" /><input name="pivot" type="float" value="0.5" /></noise2d>
+    <smoothstep name="sint" type="float"><input name="in" type="float" nodename="sint_raw" /><input name="low" type="float" value="0.38" /><input name="high" type="float" value="0.72" /></smoothstep>
+    <multiply name="streak_i" type="float"><input name="in1" type="float" nodename="streak_thin" /><input name="in2" type="float" nodename="sint" /></multiply>
+    <multiply name="wash_i" type="float"><input name="in1" type="float" nodename="wash" /><input name="in2" type="float" nodename="sint" /></multiply>
+    <max name="streak_m" type="float"><input name="in1" type="float" nodename="streak_i" /><input name="in2" type="float" nodename="wash_i" /></max>
+    <multiply name="uv_sbrk" type="vector2"><input name="in1" type="vector2" nodename="uv_warped" /><input name="in2" type="vector2" value="200, 20" /></multiply>
+    <fractal2d name="sbrk" type="float"><input name="texcoord" type="vector2" nodename="uv_sbrk" /><input name="octaves" type="integer" value="3" /><input name="amplitude" type="float" value="0.35" /></fractal2d>
+    <add name="sbrk_f" type="float"><input name="in1" type="float" nodename="sbrk" /><input name="in2" type="float" value="0.8" /></add>
+    <multiply name="streak_b" type="float"><input name="in1" type="float" nodename="streak_m" /><input name="in2" type="float" nodename="sbrk_f" /></multiply>
+    <clamp name="streak" type="float"><input name="in" type="float" nodename="streak_b" /><input name="low" type="float" value="0" /><input name="high" type="float" value="1" /></clamp>
+
+    <!-- Eroded cement skin exposing sand, ~30 cm patches. -->
+    <multiply name="uv_ero" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="3" /></multiply>
+    <fractal2d name="ero_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_ero" /><input name="octaves" type="integer" value="5" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <multiply name="ero_fine" type="float"><input name="in1" type="float" nodename="grain" /><input name="in2" type="float" value="0.06" /></multiply>
+    <add name="ero_n" type="float"><input name="in1" type="float" nodename="ero_raw" /><input name="in2" type="float" nodename="ero_fine" /></add>
+    <smoothstep name="erode" type="float"><input name="in" type="float" nodename="ero_n" /><input name="low" type="float" value="-0.02" /><input name="high" type="float" value="0.2" /></smoothstep>
+
+    <!-- Sand and fine aggregate: flat-topped grains on ~4.5 mm and ~9 mm worley grids. A smooth noise field sets each
+         grain's radius (pit technique), so grains vary in size and sit apart in the paste. -->
+    <multiply name="uv_sand0" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="220" /></multiply>
+    <multiply name="uv_swarp" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="500" /></multiply>
+    <noise2d name="swarp" type="vector2"><input name="texcoord" type="vector2" nodename="uv_swarp" /><input name="amplitude" type="vector2" value="0.35, 0.35" /></noise2d>
+    <add name="uv_sand" type="vector2"><input name="in1" type="vector2" nodename="uv_sand0" /><input name="in2" type="vector2" nodename="swarp" /></add>
+    <worleynoise2d name="sand_f1" type="float"><input name="texcoord" type="vector2" nodename="uv_sand" /></worleynoise2d>
+    <multiply name="uv_ssize" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="173" /></multiply>
+    <noise2d name="ssize" type="float"><input name="texcoord" type="vector2" nodename="uv_ssize" /><input name="amplitude" type="float" value="0.2" /><input name="pivot" type="float" value="0.3" /></noise2d>
+    <subtract name="sand_d" type="float"><input name="in1" type="float" nodename="ssize" /><input name="in2" type="float" nodename="sand_f1" /></subtract>
+    <smoothstep name="sand" type="float"><input name="in" type="float" nodename="sand_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.1" /></smoothstep>
+    <multiply name="uv_sand2" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="110" /></multiply>
+    <worleynoise2d name="sand2_f1" type="float"><input name="texcoord" type="vector2" nodename="uv_sand2" /></worleynoise2d>
+    <multiply name="uv_ssize2" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="83" /></multiply>
+    <noise2d name="ssize2" type="float"><input name="texcoord" type="vector2" nodename="uv_ssize2" /><input name="amplitude" type="float" value="0.3" /><input name="pivot" type="float" value="0.05" /></noise2d>
+    <subtract name="sand2_d" type="float"><input name="in1" type="float" nodename="ssize2" /><input name="in2" type="float" nodename="sand2_f1" /></subtract>
+    <smoothstep name="sand2" type="float"><input name="in" type="float" nodename="sand2_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.06" /></smoothstep>
+    <max name="sand_all" type="float"><input name="in1" type="float" nodename="sand" /><input name="in2" type="float" nodename="sand2" /></max>
+    <cellnoise2d name="sand_id" type="float"><input name="texcoord" type="vector2" nodename="uv_sand" /></cellnoise2d>
+
+    <!-- Fine grain, ~3 mm. -->
+    <multiply name="uv_grain" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="300" /></multiply>
+    <fractal2d name="grain" type="float"><input name="texcoord" type="vector2" nodename="uv_grain" /><input name="octaves" type="integer" value="3" /></fractal2d>
+
+    <!-- Pores with settled grime, 3 cm grid, radius from a smooth noise field (none clipped). -->
+    <multiply name="uv_pore" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="33" /></multiply>
+    <worleynoise2d name="pore_dist" type="float"><input name="texcoord" type="vector2" nodename="uv_pore" /></worleynoise2d>
+    <multiply name="uv_psize" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="41" /></multiply>
+    <noise2d name="psize_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_psize" /></noise2d>
+    <multiply name="psize_s" type="float"><input name="in1" type="float" nodename="psize_raw" /><input name="in2" type="float" value="0.22" /></multiply>
+    <subtract name="pore_r" type="float"><input name="in1" type="float" nodename="psize_s" /><input name="in2" type="float" value="0.02" /></subtract>
+    <subtract name="pore_d" type="float"><input name="in1" type="float" nodename="pore_r" /><input name="in2" type="float" nodename="pore_dist" /></subtract>
+    <smoothstep name="pore" type="float"><input name="in" type="float" nodename="pore_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.03" /></smoothstep>
+
+    <!-- Spalls: 5-15 cm patches on a 20 cm worley grid, edge jagged by a ~1 cm fractal warp. -->
+    <multiply name="uv_jag" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="22" /></multiply>
+    <fractal2d name="jag" type="vector2"><input name="texcoord" type="vector2" nodename="uv_jag" /><input name="octaves" type="integer" value="6" /><input name="amplitude" type="vector2" value="0.016, 0.016" /></fractal2d>
+    <add name="uv_spw" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="vector2" nodename="jag" /></add>
+    <multiply name="uv_sp" type="vector2"><input name="in1" type="vector2" nodename="uv_spw" /><input name="in2" type="float" value="7" /></multiply>
+    <worleynoise2d name="sp_f1" type="float"><input name="texcoord" type="vector2" nodename="uv_sp" /></worleynoise2d>
+    <multiply name="uv_spsize" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="3.3" /></multiply>
+    <noise2d name="spsize_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_spsize" /></noise2d>
+    <multiply name="spsize_s" type="float"><input name="in1" type="float" nodename="spsize_raw" /><input name="in2" type="float" value="0.9" /></multiply>
+    <subtract name="sp_r" type="float"><input name="in1" type="float" nodename="spsize_s" /><input name="in2" type="float" value="0.25" /></subtract>
+    <subtract name="sp_d" type="float"><input name="in1" type="float" nodename="sp_r" /><input name="in2" type="float" nodename="sp_f1" /></subtract>
+    <smoothstep name="spall" type="float"><input name="in" type="float" nodename="sp_d" /><input name="low" type="float" value="0" /><input name="high" type="float" value="0.02" /></smoothstep>
+    <multiply name="uv_spr" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="90" /></multiply>
+    <fractal2d name="sp_rough" type="float"><input name="texcoord" type="vector2" nodename="uv_spr" /><input name="octaves" type="integer" value="4" /></fractal2d>
+
+    <!-- Biological tint, ~40 cm patches. -->
+    <multiply name="uv_bio" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="vector2" value="2.5, 1.8" /></multiply>
+    <fractal2d name="bio_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_bio" /><input name="octaves" type="integer" value="4" /><input name="amplitude" type="float" value="0.5" /></fractal2d>
+    <smoothstep name="bio" type="float"><input name="in" type="float" nodename="bio_raw" /><input name="low" type="float" value="0.15" /><input name="high" type="float" value="0.45" /></smoothstep>
+
+    <!-- Height in meters: 1 mm undulation, 0.1 mm skin grain, 0.6 mm skin loss + 0.5 mm sand in eroded areas,
+         1.5 mm pores, 3.5 mm spalls with 1.5 mm rough floors. -->
+    <multiply name="h_mottle" type="float"><input name="in1" type="float" nodename="mottle" /><input name="in2" type="float" value="0.001" /></multiply>
+    <multiply name="h_grain" type="float"><input name="in1" type="float" nodename="grain" /><input name="in2" type="float" value="0.00015" /></multiply>
+    <multiply name="uv_micro" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="650" /></multiply>
+    <fractal2d name="micro" type="float"><input name="texcoord" type="vector2" nodename="uv_micro" /><input name="octaves" type="integer" value="2" /></fractal2d>
+    <multiply name="micro_h" type="float"><input name="in1" type="float" nodename="micro" /><input name="in2" type="float" value="0.00015" /></multiply>
+    <multiply name="sand_h0" type="float"><input name="in1" type="float" nodename="sand_all" /><input name="in2" type="float" value="0.0004" /></multiply>
+    <add name="sand_h" type="float"><input name="in1" type="float" nodename="sand_h0" /><input name="in2" type="float" nodename="micro_h" /></add>
+    <subtract name="ero_h1" type="float"><input name="in1" type="float" nodename="sand_h" /><input name="in2" type="float" value="0.0006" /></subtract>
+    <multiply name="h_ero" type="float"><input name="in1" type="float" nodename="ero_h1" /><input name="in2" type="float" nodename="erode" /></multiply>
+    <multiply name="h_pore" type="float"><input name="in1" type="float" nodename="pore" /><input name="in2" type="float" value="-0.0015" /></multiply>
+    <multiply name="sp_floor" type="float"><input name="in1" type="float" nodename="sp_rough" /><input name="in2" type="float" value="0.0015" /></multiply>
+    <add name="sp_floor2" type="float"><input name="in1" type="float" nodename="sp_floor" /><input name="in2" type="float" value="-0.0035" /></add>
+    <multiply name="h_spall" type="float"><input name="in1" type="float" nodename="sp_floor2" /><input name="in2" type="float" nodename="spall" /></multiply>
+    <add name="h_a" type="float"><input name="in1" type="float" nodename="h_mottle" /><input name="in2" type="float" nodename="h_grain" /></add>
+    <add name="h_b" type="float"><input name="in1" type="float" nodename="h_a" /><input name="in2" type="float" nodename="h_ero" /></add>
+    <add name="h_c" type="float"><input name="in1" type="float" nodename="h_b" /><input name="in2" type="float" nodename="h_pore" /></add>
+    <add name="height" type="float"><input name="in1" type="float" nodename="h_c" /><input name="in2" type="float" nodename="h_spall" /></add>
+    <!-- heighttonormal millimeter workaround (see AUTHORING.md): x1000 both, scale 16 = physical slopes. -->
+    <multiply name="uv_mm" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="1000" /></multiply>
+    <multiply name="height_mm" type="float"><input name="in1" type="float" nodename="height" /><input name="in2" type="float" value="1000" /></multiply>
+    <heighttonormal name="n_tangent" type="vector3"><input name="in" type="float" nodename="height_mm" /><input name="scale" type="float" value="16" /><input name="texcoord" type="vector2" nodename="uv_mm" /></heighttonormal>
+    <normalmap name="n_world" type="vector3"><input name="in" type="vector3" nodename="n_tangent" /></normalmap>
+
+    <!-- Color: dirty grey skin, mottled and grainy. -->
+    <mix name="col_mottle" type="color3"><input name="bg" type="color3" value="0.2, 0.195, 0.185" /><input name="fg" type="color3" value="0.27, 0.262, 0.248" /><input name="mix" type="float" nodename="mottle" /></mix>
+    <multiply name="grain_tint" type="float"><input name="in1" type="float" nodename="grain" /><input name="in2" type="float" value="0.12" /></multiply>
+    <multiply name="micro_tint" type="float"><input name="in1" type="float" nodename="micro" /><input name="in2" type="float" value="0.14" /></multiply>
+    <add name="tints" type="float"><input name="in1" type="float" nodename="grain_tint" /><input name="in2" type="float" nodename="micro_tint" /></add>
+    <add name="grain_factor" type="float"><input name="in1" type="float" nodename="tints" /><input name="in2" type="float" value="1" /></add>
+    <multiply name="col_skin" type="color3"><input name="in1" type="color3" nodename="col_mottle" /><input name="in2" type="float" nodename="grain_factor" /></multiply>
+    <!-- Grime, ~6 cm blotches of settled dirt on the skin. -->
+    <multiply name="uv_grime" type="vector2"><input name="in1" type="vector2" nodename="uv" /><input name="in2" type="float" value="16" /></multiply>
+    <fractal2d name="grime_raw" type="float"><input name="texcoord" type="vector2" nodename="uv_grime" /><input name="octaves" type="integer" value="4" /></fractal2d>
+    <multiply name="grime_t" type="float"><input name="in1" type="float" nodename="grime_raw" /><input name="in2" type="float" value="0.22" /></multiply>
+    <add name="grime_f" type="float"><input name="in1" type="float" nodename="grime_t" /><input name="in2" type="float" value="1" /></add>
+    <multiply name="col_skin2" type="color3"><input name="in1" type="color3" nodename="col_skin" /><input name="in2" type="float" nodename="grime_f" /></multiply>
+    <!-- Eroded: sand grains tan to grey, dark interstices. -->
+    <mix name="sand_col" type="color3"><input name="bg" type="color3" value="0.2, 0.19, 0.17" /><input name="fg" type="color3" value="0.3, 0.275, 0.24" /><input name="mix" type="float" nodename="sand_id" /></mix>
+    <mix name="sand_col2" type="color3"><input name="bg" type="color3" value="0.15, 0.145, 0.135" /><input name="fg" type="color3" nodename="sand_col" /><input name="mix" type="float" nodename="sand_all" /></mix>
+    <mix name="col_ero" type="color3"><input name="bg" type="color3" nodename="col_skin2" /><input name="fg" type="color3" nodename="sand_col2" /><input name="mix" type="float" nodename="erode" /></mix>
+    <!-- Biological greenish-grey tint. -->
+    <multiply name="col_bio_t" type="color3"><input name="in1" type="color3" nodename="col_ero" /><input name="in2" type="color3" value="0.9, 0.96, 0.86" /></multiply>
+    <mix name="col_bio" type="color3"><input name="bg" type="color3" nodename="col_ero" /><input name="fg" type="color3" nodename="col_bio_t" /><input name="mix" type="float" nodename="bio" /></mix>
+    <!-- Water streaks darken. -->
+    <multiply name="col_streak_t" type="color3"><input name="in1" type="color3" nodename="col_bio" /><input name="in2" type="color3" value="0.34, 0.34, 0.33" /></multiply>
+    <mix name="col_streak" type="color3"><input name="bg" type="color3" nodename="col_bio" /><input name="fg" type="color3" nodename="col_streak_t" /><input name="mix" type="float" nodename="streak" /></mix>
+    <!-- Grimy pores. -->
+    <mix name="col_pore" type="color3"><input name="bg" type="color3" nodename="col_streak" /><input name="fg" type="color3" value="0.07, 0.068, 0.062" /><input name="mix" type="float" nodename="pore" /></mix>
+    <!-- Spalls: fresher, lighter broken concrete with sand. -->
+    <mix name="sp_col" type="color3"><input name="bg" type="color3" value="0.18, 0.172, 0.162" /><input name="fg" type="color3" value="0.25, 0.238, 0.22" /><input name="mix" type="float" nodename="sand_id" /></mix>
+    <mix name="base_color" type="color3"><input name="bg" type="color3" nodename="col_pore" /><input name="fg" type="color3" nodename="sp_col" /><input name="mix" type="float" nodename="spall" /></mix>
+
+    <!-- Dielectric throughout. -->
+    <constant name="metalness" type="float"><input name="value" type="float" value="0" /></constant>
+
+    <!-- Roughness 0.85..0.95: rougher on sand, pores and spalls. -->
+    <mix name="rough_a" type="float"><input name="bg" type="float" value="0.9" /><input name="fg" type="float" value="0.86" /><input name="mix" type="float" nodename="mottle" /></mix>
+    <mix name="rough_b" type="float"><input name="bg" type="float" nodename="rough_a" /><input name="fg" type="float" value="0.93" /><input name="mix" type="float" nodename="erode" /></mix>
+    <max name="rough_c" type="float"><input name="in1" type="float" nodename="pore" /><input name="in2" type="float" nodename="spall" /></max>
+    <mix name="roughness" type="float"><input name="bg" type="float" nodename="rough_b" /><input name="fg" type="float" value="0.95" /><input name="mix" type="float" nodename="rough_c" /></mix>
+
+    <output name="base_color_out" type="color3" nodename="base_color" />
+    <output name="roughness_out" type="float" nodename="roughness" />
+    <output name="normal_out" type="vector3" nodename="n_world" />
+    <output name="metalness_out" type="float" nodename="metalness" />
+  </nodegraph>
+  <standard_surface name="SR_weathered" type="surfaceshader">
+    <input name="base" type="float" value="1" />
+    <input name="base_color" type="color3" nodegraph="NG_weathered" output="base_color_out" />
+    <input name="specular" type="float" value="0.5" />
+    <input name="specular_IOR" type="float" value="1.5" />
+    <input name="specular_roughness" type="float" nodegraph="NG_weathered" output="roughness_out" />
+    <input name="metalness" type="float" nodegraph="NG_weathered" output="metalness_out" />
+    <input name="normal" type="vector3" nodegraph="NG_weathered" output="normal_out" />
+  </standard_surface>
+  <surfacematerial name="M_weathered" type="material"><input name="surfaceshader" type="surfaceshader" nodename="SR_weathered" /></surfacematerial>
+</materialx>
