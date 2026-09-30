@@ -1,0 +1,15 @@
+{
+  "title": "MaterialX Fidelity",
+  "renderers": [
+    { "id": "materialx-glsl", "label": "MaterialX GLSL", "reference": true, "category": "rasterizer" },
+    { "id": "materialx-metal", "label": "MaterialX Metal", "category": "rasterizer" },
+    { "id": "materialx-osl", "label": "MaterialX OSL", "category": "raytracer" },
+    { "id": "blender-new", "label": "Blender Cycles", "category": "pathtracer" },
+    { "id": "blender-nodes", "label": "Blender Cycles + nodes PR", "category": "pathtracer" },
+    { "id": "blender-eevee-nodes", "label": "Blender Eevee + nodes PR", "category": "rasterizer" },
+    { "id": "threejs-current", "label": "Three.js r186", "category": "rasterizer" },
+    { "id": "threejs-new", "label": "Three.js PR #34593", "category": "rasterizer" }
+  ],
+  "outputs": [{ "id": "beauty", "label": "Beauty" }],
+  "delta": true
+}
