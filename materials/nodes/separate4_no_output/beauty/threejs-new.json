@@ -1,0 +1,12 @@
+{
+  "rendererName": "threejs-new",
+  "status": "success",
+  "error": null,
+  "logs": [
+    {
+      "level": "error",
+      "source": "renderer",
+      "message": "MaterialX error: type-mismatch [final_color]: Mismatched types in port connection: <input name=\"mix\" type=\"float\" nodename=\"node_under_test\">"
+    }
+  ]
+}

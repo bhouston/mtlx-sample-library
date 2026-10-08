@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!--
+    The document declares its own node, tinted_checker: a nodedef implemented by a nodegraph, as MaterialX documents
+    and Unity Shader Graph exports define custom nodes. checker_a takes tint (1, 0.45, 0.1) and scale (8, 8) from the
+    document's nodedef; checker_b authors tint (0.1, 0.4, 1) and scale (2, 2). The result is an orange 8x8 checker
+    whose light cells show the blue 2x2 checker. Regression test for the review of three.js #34593.
+    Adapted from the repro by @hybridherbst.
+  -->
+  <nodedef name="ND_tinted_checker" node="tinted_checker">
+    <input name="tint" type="color3" value="1, 0.45, 0.1" />
+    <input name="scale" type="vector2" value="8, 8" />
+    <output name="color" type="color3" />
+    <output name="mask" type="float" />
+  </nodedef>
+  <nodegraph name="NG_tinted_checker" nodedef="ND_tinted_checker">
+    <multiply name="dark" type="color3">
+      <input name="in1" type="color3" interfacename="tint" />
+      <input name="in2" type="float" value="0.15" />
+    </multiply>
+    <checkerboard name="checker" type="color3">
+      <input name="color1" type="color3" interfacename="tint" />
+      <input name="color2" type="color3" nodename="dark" />
+      <input name="uvtiling" type="vector2" interfacename="scale" />
+    </checkerboard>
+    <checkerboard name="checker_mask" type="color3">
+      <input name="color1" type="color3" value="1, 1, 1" />
+      <input name="color2" type="color3" value="0, 0, 0" />
+      <input name="uvtiling" type="vector2" interfacename="scale" />
+    </checkerboard>
+    <extract name="mask_channel" type="float">
+      <input name="in" type="color3" nodename="checker_mask" />
+      <input name="index" type="integer" value="0" />
+    </extract>
+    <output name="color" type="color3" nodename="checker" />
+    <output name="mask" type="float" nodename="mask_channel" />
+  </nodegraph>
+
+  <!-- Unconnected inputs: tint and scale come from the document's nodedef. -->
+  <tinted_checker name="checker_a" type="multioutput" />
+  <tinted_checker name="checker_b" type="multioutput">
+    <input name="tint" type="color3" value="0.1, 0.4, 1" />
+    <input name="scale" type="vector2" value="2, 2" />
+  </tinted_checker>
+  <mix name="combined" type="color3">
+    <input name="fg" type="color3" nodename="checker_b" output="color" />
+    <input name="bg" type="color3" nodename="checker_a" output="color" />
+    <input name="mix" type="float" nodename="checker_a" output="mask" />
+  </mix>
+  <standard_surface name="SR_checker" type="surfaceshader">
+    <input name="base_color" type="color3" nodename="combined" />
+  </standard_surface>
+  <surfacematerial name="M_checker" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_checker" />
+  </surfacematerial>
+</materialx>

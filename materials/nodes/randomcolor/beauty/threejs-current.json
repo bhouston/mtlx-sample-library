@@ -1,0 +1,10 @@
+{
+  "rendererName": "threejs-current",
+  "status": "failed",
+  "error": {
+    "name": "Error",
+    "message": "THREE.MaterialXLoader: MaterialX translation failed with 1 error(s). Unsupported MaterialX node category \"randomcolor\" on \"node_under_test\".",
+    "stack": "Error: THREE.MaterialXLoader: MaterialX translation failed with 1 error(s). Unsupported MaterialX node category \"randomcolor\" on \"node_under_test\".\n    at createRenderError (file:///Users/bhouston/Coding/.worktrees/mtlx-fidelity-regressions/packages/renderer-threejs/dist/index.js:104:19)\n    at ThreeJsRenderer.generateImage (file:///Users/bhouston/Coding/.worktrees/mtlx-fidelity-regressions/packages/renderer-threejs/dist/index.js:314:23)\n    at async file:///Users/bhouston/Coding/.worktrees/mtlx-fidelity-regressions/packages/core/dist/references.js:264:38"
+  },
+  "logs": []
+}

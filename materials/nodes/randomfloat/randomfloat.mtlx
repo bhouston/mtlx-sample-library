@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!--
+    randomfloat with a float input: one random grey per cell of an 8x8 grid. Regression test for three.js #34866.
+  -->
+  <nodegraph name="NG_test_randomfloat">
+    <texcoord name="uv0" type="vector2" />
+    <multiply name="uv8" type="vector2">
+      <input name="in1" type="vector2" nodename="uv0" />
+      <input name="in2" type="float" value="8.0" />
+    </multiply>
+    <floor name="cell" type="vector2">
+      <input name="in" type="vector2" nodename="uv8" />
+    </floor>
+    <dotproduct name="cell_index" type="float">
+      <input name="in1" type="vector2" nodename="cell" />
+      <input name="in2" type="vector2" value="1.0, 8.0" />
+    </dotproduct>
+    <randomfloat name="node_under_test" type="float" nodedef="ND_randomfloat_float">
+      <input name="in" type="float" nodename="cell_index" />
+      <input name="min" type="float" value="0.1" />
+      <input name="max" type="float" value="0.9" />
+      <input name="seed" type="integer" value="3" />
+    </randomfloat>
+    <convert name="final_color" type="color3">
+      <input name="in" type="float" nodename="node_under_test" />
+    </convert>
+    <output name="out_base_color" type="color3" nodename="final_color" />
+  </nodegraph>
+  <standard_surface name="SR_randomfloat" type="surfaceshader">
+    <input name="base_color" type="color3" nodegraph="NG_test_randomfloat" output="out_base_color" />
+  </standard_surface>
+  <surfacematerial name="M_randomfloat" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_randomfloat" />
+  </surfacematerial>
+</materialx>
