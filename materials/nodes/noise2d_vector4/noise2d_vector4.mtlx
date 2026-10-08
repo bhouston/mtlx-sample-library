@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!--
+    noise2d of type vector4: each channel is its own noise, as in MaterialX's genglsl implementation.
+    Shows the first, second and fourth channels remapped from [-1, 1], so channels that repeat one noise render grey.
+    Regression test for three.js #34833.
+  -->
+  <nodegraph name="NG_test_noise2d_vector4">
+    <texcoord name="uv0" type="vector2" />
+    <multiply name="coords_under_test" type="vector2">
+      <input name="in1" type="vector2" nodename="uv0" />
+      <input name="in2" type="vector2" value="8.0, 7.0" />
+    </multiply>
+    <noise2d name="node_under_test" type="vector4" nodedef="ND_noise2d_vector4">
+      <input name="amplitude" type="vector4" value="1.0, 0.85, 0.7, 0.9" />
+      <input name="pivot" type="float" value="0.0" />
+      <input name="texcoord" type="vector2" nodename="coords_under_test" />
+    </noise2d>
+    <separate4 name="split" type="multioutput">
+      <input name="in" type="vector4" nodename="node_under_test" />
+    </separate4>
+    <combine3 name="channels" type="color3">
+      <input name="in1" type="float" nodename="split" output="outx" />
+      <input name="in2" type="float" nodename="split" output="outy" />
+      <input name="in3" type="float" nodename="split" output="outw" />
+    </combine3>
+    <range name="color_01" type="color3">
+      <input name="in" type="color3" nodename="channels" />
+      <input name="inlow" type="color3" value="-1.0, -1.0, -1.0" />
+      <input name="inhigh" type="color3" value="1.0, 1.0, 1.0" />
+      <input name="outlow" type="color3" value="0.0, 0.0, 0.0" />
+      <input name="outhigh" type="color3" value="1.0, 1.0, 1.0" />
+      <input name="doclamp" type="boolean" value="true" />
+    </range>
+    <output name="out_base_color" type="color3" nodename="color_01" />
+  </nodegraph>
+  <standard_surface name="SR_noise2d_vector4" type="surfaceshader">
+    <input name="base_color" type="color3" nodegraph="NG_test_noise2d_vector4" output="out_base_color" />
+  </standard_surface>
+  <surfacematerial name="M_noise2d_vector4" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_noise2d_vector4" />
+  </surfacematerial>
+</materialx>

@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!--
+    The mix input connects to separate4 without naming an output, which MaterialX resolves to the first output,
+    so the blend follows u (left blue, right orange). Regression test for three.js #34835.
+  -->
+  <nodegraph name="NG_test_separate4_no_output">
+    <texcoord name="uv0" type="vector2" />
+    <separate2 name="uv_split" type="multioutput">
+      <input name="in" type="vector2" nodename="uv0" />
+    </separate2>
+    <combine3 name="uv_color" type="color3">
+      <input name="in1" type="float" nodename="uv_split" output="outx" />
+      <input name="in2" type="float" nodename="uv_split" output="outy" />
+      <input name="in3" type="float" value="0.5" />
+    </combine3>
+    <combine4 name="uv_vec4" type="vector4">
+      <input name="in1" type="float" nodename="uv_split" output="outx" />
+      <input name="in2" type="float" nodename="uv_split" output="outy" />
+      <input name="in3" type="float" value="0.5" />
+      <input name="in4" type="float" value="1.0" />
+    </combine4>
+    <separate4 name="node_under_test" type="multioutput">
+      <input name="in" type="vector4" nodename="uv_vec4" />
+    </separate4>
+    <mix name="final_color" type="color3">
+      <input name="fg" type="color3" value="0.95, 0.6, 0.2" />
+      <input name="bg" type="color3" value="0.1, 0.3, 0.8" />
+      <input name="mix" type="float" nodename="node_under_test" />
+    </mix>
+    <output name="out_base_color" type="color3" nodename="final_color" />
+  </nodegraph>
+  <standard_surface name="SR_separate4_no_output" type="surfaceshader">
+    <input name="base_color" type="color3" nodegraph="NG_test_separate4_no_output" output="out_base_color" />
+  </standard_surface>
+  <surfacematerial name="M_separate4_no_output" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_separate4_no_output" />
+  </surfacematerial>
+</materialx>

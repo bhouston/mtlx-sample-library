@@ -1,0 +1,16 @@
+{
+  "rendererName": "blender-new",
+  "status": "failed",
+  "error": {
+    "name": "Error",
+    "message": "Unsupported MaterialX node category: randomfloat",
+    "stack": "Error: Unsupported MaterialX node category: randomfloat\n    at createRenderError (file:///Users/bhouston/Coding/.worktrees/mtlx-fidelity-regressions/packages/renderer-blender/dist/index.js:195:19)\n    at file:///Users/bhouston/Coding/.worktrees/mtlx-fidelity-regressions/packages/renderer-blender/dist/index.js:415:33\n    at settle (file:///Users/bhouston/Coding/.worktrees/mtlx-fidelity-regressions/packages/renderer-blender/dist/index.js:394:13)\n    at ChildProcess.<anonymous> (file:///Users/bhouston/Coding/.worktrees/mtlx-fidelity-regressions/packages/renderer-blender/dist/index.js:415:13)\n    at ChildProcess.emit (node:events:509:20)\n    at maybeClose (node:internal/child_process:1108:16)\n    at ChildProcess._handle.onexit (node:internal/child_process:305:5)"
+  },
+  "logs": [
+    {
+      "level": "error",
+      "source": "renderer",
+      "message": "{\"event\": \"blender-new-render-import-failed\", \"mtlx_path\": \"/Users/bhouston/Coding/.worktrees/mtlx-fidelity-regressions/submodules/mtlx-sample-library/materials/nodes/randomfloat/randomfloat.mtlx\", \"output\": \"/Users/bhouston/Coding/.worktrees/mtlx-fidelity-regressions/submodules/mtlx-sample-library/materials/nodes/randomfloat/blender-new-temp.png\", \"error\": \"Unsupported MaterialX node category: randomfloat\", \"warnings\": [], \"timings_ms\": {\"configure_render\": 0.669, \"find_normalized_root\": 0.012, \"load_materialx\": 181.803, \"total\": 182.498}}"
+    }
+  ]
+}

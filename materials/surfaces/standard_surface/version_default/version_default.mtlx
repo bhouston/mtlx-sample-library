@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!--
+    An unversioned standard_surface resolves to the default version, 1.0.1 (isdefaultversion), whose base_color
+    default is 0.8 grey. Only base is authored, so the surface is 0.8 grey; version 1.0.0 would make it white.
+    Regression test for the review of three.js #34593 (nodedef version resolution).
+  -->
+  <standard_surface name="SR_version_default" type="surfaceshader">
+    <input name="base" type="float" value="1.0" />
+  </standard_surface>
+  <surfacematerial name="M_version_default" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_version_default" />
+  </surfacematerial>
+</materialx>

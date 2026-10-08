@@ -1,0 +1,22 @@
+{
+  "rendererName": "threejs-new",
+  "status": "success",
+  "error": null,
+  "logs": [
+    {
+      "level": "error",
+      "source": "renderer",
+      "message": "MaterialX error: unsupported-node [checker_a]: Unsupported MaterialX node category \"tinted_checker\" on \"checker_a\"."
+    },
+    {
+      "level": "error",
+      "source": "renderer",
+      "message": "MaterialX error: unsupported-node [checker_b]: Unsupported MaterialX node category \"tinted_checker\" on \"checker_b\"."
+    },
+    {
+      "level": "error",
+      "source": "renderer",
+      "message": "MaterialX error: unsupported-node [checker_a]: Unsupported MaterialX node category \"tinted_checker\" on \"checker_a\"."
+    }
+  ]
+}

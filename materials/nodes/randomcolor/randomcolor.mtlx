@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!--
+    randomcolor: one random hue, saturation and brightness per cell of an 8x8 grid. Regression test for three.js #34866.
+  -->
+  <nodegraph name="NG_test_randomcolor">
+    <texcoord name="uv0" type="vector2" />
+    <multiply name="uv8" type="vector2">
+      <input name="in1" type="vector2" nodename="uv0" />
+      <input name="in2" type="float" value="8.0" />
+    </multiply>
+    <floor name="cell" type="vector2">
+      <input name="in" type="vector2" nodename="uv8" />
+    </floor>
+    <dotproduct name="cell_index" type="float">
+      <input name="in1" type="vector2" nodename="cell" />
+      <input name="in2" type="vector2" value="1.0, 8.0" />
+    </dotproduct>
+    <randomcolor name="node_under_test" type="color3" nodedef="ND_randomcolor_float">
+      <input name="in" type="float" nodename="cell_index" />
+      <input name="brightnesslow" type="float" value="0.5" />
+      <input name="seed" type="integer" value="5" />
+    </randomcolor>
+    <output name="out_base_color" type="color3" nodename="node_under_test" />
+  </nodegraph>
+  <standard_surface name="SR_randomcolor" type="surfaceshader">
+    <input name="base_color" type="color3" nodegraph="NG_test_randomcolor" output="out_base_color" />
+  </standard_surface>
+  <surfacematerial name="M_randomcolor" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_randomcolor" />
+  </surfacematerial>
+</materialx>

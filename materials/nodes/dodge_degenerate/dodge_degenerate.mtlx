@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<materialx version="1.39" colorspace="lin_rec709">
+  <!--
+    dodge with fg = 1.0 in the red and blue channels: MaterialX returns 0 there instead of dividing by zero,
+    so red and blue are black and only green varies. Regression test for three.js #34834.
+  -->
+  <nodegraph name="NG_test_dodge_degenerate">
+    <texcoord name="uv0" type="vector2" />
+    <separate2 name="uv_split" type="multioutput">
+      <input name="in" type="vector2" nodename="uv0" />
+    </separate2>
+    <multiply name="uv_x" type="float">
+      <input name="in1" type="float" nodename="uv_split" output="outx" />
+      <input name="in2" type="float" value="0.9" />
+    </multiply>
+    <combine3 name="fg" type="color3">
+      <input name="in1" type="float" value="1.0" />
+      <input name="in2" type="float" nodename="uv_x" />
+      <input name="in3" type="float" value="1.0" />
+    </combine3>
+    <combine3 name="bg" type="color3">
+      <input name="in1" type="float" nodename="uv_split" output="outy" />
+      <input name="in2" type="float" value="0.6" />
+      <input name="in3" type="float" value="0.8" />
+    </combine3>
+    <dodge name="node_under_test" type="color3" nodedef="ND_dodge_color3">
+      <input name="fg" type="color3" nodename="fg" />
+      <input name="bg" type="color3" nodename="bg" />
+      <input name="mix" type="float" value="1.0" />
+    </dodge>
+    <clamp name="clamped" type="color3">
+      <input name="in" type="color3" nodename="node_under_test" />
+    </clamp>
+    <output name="out_base_color" type="color3" nodename="clamped" />
+  </nodegraph>
+  <standard_surface name="SR_dodge_degenerate" type="surfaceshader">
+    <input name="base_color" type="color3" nodegraph="NG_test_dodge_degenerate" output="out_base_color" />
+  </standard_surface>
+  <surfacematerial name="M_dodge_degenerate" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="SR_dodge_degenerate" />
+  </surfacematerial>
+</materialx>
